@@ -1,0 +1,62 @@
+import uuid
+from datetime import datetime
+from typing import Optional
+
+from sqlalchemy import Column, String
+from sqlmodel import SQLModel, Field
+
+
+class Video(SQLModel, table=True):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    title: str
+    description: str
+    video_url: str
+    thumbnail_url: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class Activity(SQLModel, table=True):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    category: str
+    title: str
+    location: Optional[str] = None
+    reach: Optional[str] = None
+    badge: Optional[str] = None
+    icon: Optional[str] = None
+    date: Optional[str] = None
+    color: Optional[str] = None
+    image_url: Optional[str] = None
+    images: Optional[str] = None  # JSON-encoded list of URLs
+
+
+class Donor(SQLModel, table=True):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    # phone is the unique key — one row per person
+    phone: str = Field(sa_column=Column(String, unique=True, index=True, nullable=False))
+    name: Optional[str] = None
+    email: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class FoodRequest(SQLModel, table=True):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    donor_id: Optional[str] = Field(default=None, foreign_key="donor.id")
+    kit_type: str
+    area: str
+    preferred_date: Optional[str] = None
+    qty: Optional[str] = None
+    notes: Optional[str] = None
+    status: str = "new"  # new, confirmed, delivered
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class Payment(SQLModel, table=True):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    donor_id: Optional[str] = Field(default=None, foreign_key="donor.id")
+    razorpay_order_id: str
+    razorpay_payment_id: Optional[str] = None
+    razorpay_signature: Optional[str] = None
+    amount: int  # stored in rupees
+    status: str = "pending"  # pending, success, failed
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
