@@ -50,6 +50,19 @@ class FoodRequest(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class Volunteer(SQLModel, table=True):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    donor_id: Optional[str] = Field(default=None, foreign_key="donor.id")
+    name: str
+    phone: str
+    purpose: str  # "donation" or "services"
+    interest_area: Optional[str] = None
+    availability: Optional[str] = None
+    notes: Optional[str] = None
+    status: str = "new"  # new, contacted, active
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class Payment(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     donor_id: Optional[str] = Field(default=None, foreign_key="donor.id")

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, Route, Routes } from 'react-router-dom';
+import { Link, Route, Routes, useParams } from 'react-router-dom';
 import Admin from './pages/Admin';
 
 function Gallery({ activity, onClose }) {
@@ -46,6 +46,46 @@ function Gallery({ activity, onClose }) {
   );
 }
 
+function ProgramDetail({ programs }) {
+  const { slug } = useParams();
+  const program = programs.find((p) => p.slug === slug);
+
+  if (!program) {
+    return (
+      <div className="program-detail-page">
+        <div className="program-detail-content">
+          <Link to="/#programs" className="back-link"><i className="ti ti-arrow-left" /> Back to programs</Link>
+          <h1 className="program-detail-title">Program not found</h1>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="program-detail-page">
+      <div className="program-detail-hero" style={{ backgroundColor: program.color }}>
+        {program.image_url
+          ? <img src={program.image_url} alt={program.title} />
+          : <i className={program.icon} />}
+      </div>
+      <div className="program-detail-content">
+        <Link to="/#programs" className="back-link"><i className="ti ti-arrow-left" /> Back to programs</Link>
+        <h1 className="program-detail-title">{program.title}</h1>
+        <div className="program-detail-meta">
+          <i className="ti ti-trending-up" /> {program.stat}
+        </div>
+        {(program.details || [program.description]).map((para, i) => (
+          <p key={i}>{para}</p>
+        ))}
+        <div className="program-detail-cta">
+          <Link to="/#donate" className="btn btn-primary"><i className="ti ti-heart" /> Support this program</Link>
+          <Link to="/#volunteer" className="btn btn-ghost"><i className="ti ti-users" /> Volunteer with us</Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const defaultActivities = [
   {
     category: 'Food drive',
@@ -81,24 +121,92 @@ const defaultActivities = [
 
 const defaultPrograms = [
   {
+    slug: 'food-nutrition',
     icon: 'ti ti-basket',
+    color: '#854F0B',
+    image_url: '',
     title: 'Food & nutrition',
     description: 'Daily grocery distribution reaching 500+ doorsteps. We address malnutrition and ensure no family goes to bed hungry.',
     stat: '500+ families served daily',
+    details: [
+      "Our food and nutrition program is the backbone of Swabhimaan's daily work. Every morning, our teams pack and deliver grocery kits, cooked meals, and ration supplies to families across Neelasandra, LR Nagar, Rajendranagar, Karesandra, and Subhashnagar.",
+      'Each grocery kit provides a family of four with essential staples for up to two weeks. For households with infants or elderly members, we add nutrition-dense supplements based on need assessments done by our field volunteers.',
+      "Donors can sponsor a single grocery kit, fund a month of cooked meals for a family, or set up a recurring monthly contribution. Every food request raised through our 'Send food' form is verified by a local volunteer before delivery, with photo updates shared afterwards.",
+    ],
   },
   {
+    slug: 'education-support',
     icon: 'ti ti-school',
+    color: '#0F6E56',
+    image_url: '',
     title: 'Education support',
     description: 'After-school classes, scholarships, and career mentoring for children from underserved neighborhoods.',
     stat: '200+ children supported',
+    details: [
+      'We run free after-school tuition centers staffed by trained volunteers and part-time teachers, covering core subjects for students from grade 1 through grade 10.',
+      'Each year, Swabhimaan awards need-based scholarships to high-performing students to cover school fees, books, uniforms, and exam costs, with progress reviewed every term.',
+      'Our career mentoring track connects students in grades 9-12 with volunteer professionals who run monthly sessions on career options, college applications, and digital and English-language skills.',
+    ],
   },
   {
+    slug: 'healthcare-access',
     icon: 'ti ti-stethoscope',
+    color: '#185FA5',
+    image_url: '',
     title: 'Healthcare access',
     description: 'Regular health camps, screenings, and medicine distribution for families in need.',
     stat: '4 community camps monthly',
+    details: [
+      'Our healthcare access program brings basic diagnostic and treatment services directly to neighborhoods through monthly camps held in partnership with local clinics, hospitals, and volunteer doctors.',
+      'A typical camp includes general health checkups, blood pressure and blood sugar screening, eye checkups, and basic dental screening, with referrals to partner hospitals where needed.',
+      'We maintain a small revolving stock of common medicines distributed free of cost, and run awareness sessions on hygiene, maternal health, and preventive care.',
+    ],
+  },
+  {
+    slug: 'livelihood-skills',
+    icon: 'ti ti-tool',
+    color: '#6D4AFF',
+    image_url: '',
+    title: 'Livelihood & skill training',
+    description: 'Vocational training in tailoring, computer skills, and trades that help adults build sustainable income.',
+    stat: '150+ adults trained',
+    details: [
+      'Our livelihood program runs short, practical vocational courses — tailoring and embroidery, basic computer operation, mobile repair, and beauty & wellness — designed around skills with real, local demand.',
+      'Each batch runs for 6-10 weeks and participants receive the tools or starter kits they need to begin working immediately after completing the course.',
+      'We connect graduates with local job openings and support a few participants each year in setting up micro-enterprises with small seed grants and ongoing mentorship.',
+    ],
+  },
+  {
+    slug: 'women-empowerment',
+    icon: 'ti ti-heart-handshake',
+    color: '#C2185B',
+    image_url: '',
+    title: 'Women empowerment',
+    description: 'Self-help groups, financial literacy, and leadership programs that help women become decision-makers in their families and communities.',
+    stat: '30+ self-help groups active',
+    details: [
+      'We organize women into self-help groups (SHGs) of 10-15 members each, who meet weekly to save small amounts collectively and access low-interest group loans.',
+      'Financial literacy sessions cover budgeting, banking, digital payments, and government schemes for women entrepreneurs.',
+      'SHG members are prioritized for our livelihood training batches, creating a direct path from financial literacy to income generation to leadership.',
+    ],
+  },
+  {
+    slug: 'community-environment',
+    icon: 'ti ti-leaf',
+    color: '#2E7D32',
+    image_url: '',
+    title: 'Community awareness & environment',
+    description: 'Awareness drives on hygiene, sanitation, civic rights, and environmental sustainability to build healthier, cleaner neighborhoods.',
+    stat: '12+ awareness drives yearly',
+    details: [
+      'We run regular campaigns on hygiene and sanitation, helping households adopt practices like handwashing, safe drinking water storage, and proper waste disposal.',
+      'Our civic rights workshops help residents access entitlements like ration cards, Aadhaar-linked benefits, voter registration, and grievance redressal processes.',
+      'On the environmental side, we organize tree plantation drives, waste segregation campaigns, and disaster-preparedness sessions ahead of monsoon season.',
+    ],
   },
 ];
+
+const OFFICE_MAP_URL = 'https://www.google.com/maps/search/?api=1&query=12.945959314441675,77.61914860797097';
 
 const defaultStories = [
   {
@@ -136,10 +244,25 @@ const defaultFaqs = [
   },
 ];
 
+const defaultTrustees = [
+  { name: 'Trustee Name 1', role: 'Founder & Managing Trustee', photo_url: '' },
+  { name: 'Trustee Name 2', role: 'Trustee', photo_url: '' },
+  { name: 'Trustee Name 3', role: 'Trustee', photo_url: '' },
+  { name: 'Trustee Name 4', role: 'Trustee', photo_url: '' },
+  { name: 'Trustee Name 5', role: 'Trustee', photo_url: '' },
+  { name: 'Trustee Name 6', role: 'Trustee', photo_url: '' },
+];
+
+const defaultDonors = [
+  { name: 'Acme Corporation', contribution: 'Platinum partner', logo_url: '' },
+  { name: 'Example Foundation', contribution: 'CSR program sponsor', logo_url: '' },
+  { name: 'Sunrise Industries', contribution: 'Annual food drive sponsor', logo_url: '' },
+];
+
 const defaultTrust = [
-  { title: 'Registered trust', value: 'Section 12A registered' },
-  { title: '80G exemption', value: 'Tax benefit for donors' },
-  { title: 'FCRA compliant', value: 'International funding ready' },
+  { title: 'Registered trust', value: 'Section 12A registered', doc_url: '' },
+  { title: '80G exemption', value: 'Tax benefit for donors', doc_url: '' },
+  { title: 'FCRA compliant', value: 'International funding ready', doc_url: '' },
 ];
 
 function getYoutubeEmbed(url) {
@@ -156,7 +279,7 @@ function getYoutubeEmbed(url) {
   return null;
 }
 
-function Home({ activities, programs, stories, faqs, trust, videos }) {
+function Home({ activities, programs, stories, faqs, trust, trustees, donors, videos }) {
   const [galleryActivity, setGalleryActivity] = useState(null);
   const [showAllActivities, setShowAllActivities] = useState(false);
   const [donationAmount, setDonationAmount] = useState(500);
@@ -218,6 +341,53 @@ function Home({ activities, programs, stories, faqs, trust, videos }) {
     window.open(`https://wa.me/9945277470?text=${encodeURIComponent(lines.join('\n'))}`, '_blank');
   }
 
+  const interestAreas = [
+    'Food distribution',
+    'Teaching & tutoring',
+    'Health awareness camps',
+    'Event support',
+    'Fundraising & outreach',
+    'Other',
+  ];
+  const [volName, setVolName] = useState('');
+  const [volPhone, setVolPhone] = useState('');
+  const [volPurpose, setVolPurpose] = useState('services');
+  const [volInterest, setVolInterest] = useState(interestAreas[0]);
+  const [volAvailability, setVolAvailability] = useState('Weekends');
+  const [volNotes, setVolNotes] = useState('');
+
+  async function handleVolunteer() {
+    const lines = [
+      `Hi Swabhimaan! I'd like to volunteer.`,
+      ``,
+      `Name: ${volName || '(not provided)'}`,
+      `WhatsApp: ${volPhone || '(not provided)'}`,
+      `Purpose: ${volPurpose === 'donation' ? 'Donation support' : 'On-ground services'}`,
+    ];
+    if (volPurpose === 'services') {
+      lines.push(`Area of interest: ${volInterest}`);
+      lines.push(`Availability: ${volAvailability}`);
+    }
+    lines.push(`Notes: ${volNotes || 'None'}`);
+    try {
+      await fetch('/api/volunteers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: volName,
+          phone: volPhone,
+          purpose: volPurpose,
+          interest_area: volPurpose === 'services' ? volInterest : null,
+          availability: volPurpose === 'services' ? volAvailability : null,
+          notes: volNotes || null,
+        }),
+      });
+    } catch (_) {
+      // still open WhatsApp even if DB save fails
+    }
+    window.open(`https://wa.me/9945436757?text=${encodeURIComponent(lines.join('\n'))}`, '_blank');
+  }
+
   const [donorName, setDonorName] = useState('');
   const [donorPhone, setDonorPhone] = useState('');
   const [paying, setPaying] = useState(false);
@@ -277,9 +447,9 @@ function Home({ activities, programs, stories, faqs, trust, videos }) {
     <>
       <section className="hero" id="home">
         <div className="hero-content fade-up">
-          <div className="hero-eyebrow">
+          <a href={OFFICE_MAP_URL} target="_blank" rel="noopener noreferrer" className="hero-eyebrow hero-eyebrow-link">
             <i className="ti ti-map-pin" /> Bengaluru · Serving since 2000
-          </div>
+          </a>
           <h1>
             Enabling dignity,
             <br />
@@ -449,16 +619,21 @@ function Home({ activities, programs, stories, faqs, trust, videos }) {
         </p>
         <div className="programs-grid">
           {programs.map((program) => (
-            <div key={program.title} className="prog-card">
-              <div className="prog-icon">
-                <i className={program.icon} />
+            <Link key={program.slug} to={`/programs/${program.slug}`} className="prog-card">
+              <div className="prog-thumb" style={{ backgroundColor: program.color }}>
+                {program.image_url
+                  ? <img src={program.image_url} alt={program.title} />
+                  : <i className={program.icon} />}
               </div>
-              <div className="prog-title">{program.title}</div>
-              <div className="prog-desc">{program.description}</div>
-              <div className="prog-stat">
-                <i className="ti ti-trending-up" /> {program.stat}
+              <div className="prog-body">
+                <div className="prog-title">{program.title}</div>
+                <div className="prog-stat">
+                  <i className="ti ti-trending-up" /> {program.stat}
+                </div>
+                <div className="prog-desc">{program.description}</div>
+                <div className="prog-link">View program <i className="ti ti-arrow-right" /></div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </section>
@@ -488,7 +663,7 @@ function Home({ activities, programs, stories, faqs, trust, videos }) {
             <div className="hc-desc">Donate grocery kits or coordinate delivery in local neighborhoods.</div>
             <div className="hc-cta">Send a kit <i className="ti ti-arrow-right" /></div>
           </a>
-          <a href="#stories" className="help-card">
+          <a href="#volunteer" className="help-card">
             <div className="hc-icon">
               <i className="ti ti-users" />
             </div>
@@ -587,7 +762,7 @@ function Home({ activities, programs, stories, faqs, trust, videos }) {
               <div className="wa-messages">
                 <div className="wa-bubble">
                   Hi! We received your <strong>{selectedKit}</strong> request for <strong>{fdQty || '10'} {fdArea === 'Let Swabhimaan decide' ? 'families' : `families in ${fdArea}`}</strong>{fdDate ? ` on ${fdDate}` : ''}.<br /><br />
-                  Reply <strong>YES</strong> to confirm, or call us at 9945436757 to adjust.
+                  Reply <strong>YES</strong> to confirm, or call us at 9945277470 to adjust.
                   <div className="wa-time">Just now ✓✓</div>
                 </div>
                 <div className="wa-bubble out">
@@ -604,6 +779,75 @@ function Home({ activities, programs, stories, faqs, trust, videos }) {
                 <div className="wa-send"><i className="ti ti-send" /></div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="volunteer">
+        <div className="section-label">Volunteer</div>
+        <h2 className="section-title">Join the team — <em>confirmed via WhatsApp</em></h2>
+        <p className="section-sub">Tell us how you'd like to help. We'll add you to the right WhatsApp group and follow up within 2 hours.</p>
+        <div className="form-panel volunteer-panel">
+          <div className="field-row">
+            <div className="field-group">
+              <label className="field-label">Your name</label>
+              <input type="text" placeholder="Full name" value={volName} onChange={(e) => setVolName(e.target.value)} />
+            </div>
+            <div className="field-group">
+              <label className="field-label">WhatsApp number</label>
+              <input type="tel" placeholder="+91 98765 43210" value={volPhone} onChange={(e) => setVolPhone(e.target.value)} />
+            </div>
+          </div>
+          <div className="field-group">
+            <label className="field-label">How would you like to help?</label>
+            <div className="purpose-grid">
+              <div
+                className={`purpose-card ${volPurpose === 'services' ? 'selected' : ''}`}
+                onClick={() => setVolPurpose('services')}
+              >
+                <i className="ti ti-users-group" />
+                <div className="kit-name">On-ground services</div>
+                <div className="kit-price">Time, skills, presence</div>
+              </div>
+              <div
+                className={`purpose-card ${volPurpose === 'donation' ? 'selected' : ''}`}
+                onClick={() => setVolPurpose('donation')}
+              >
+                <i className="ti ti-gift" />
+                <div className="kit-name">Donation support</div>
+                <div className="kit-price">Funds, goods, sponsorship</div>
+              </div>
+            </div>
+          </div>
+          {volPurpose === 'services' && (
+            <div className="field-row">
+              <div className="field-group">
+                <label className="field-label">Area of interest</label>
+                <select value={volInterest} onChange={(e) => setVolInterest(e.target.value)}>
+                  {interestAreas.map((area) => (
+                    <option key={area}>{area}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="field-group">
+                <label className="field-label">Availability</label>
+                <select value={volAvailability} onChange={(e) => setVolAvailability(e.target.value)}>
+                  <option>Weekdays</option>
+                  <option>Weekends</option>
+                  <option>Flexible / anytime</option>
+                </select>
+              </div>
+            </div>
+          )}
+          <div className="field-group">
+            <label className="field-label">Anything else we should know?</label>
+            <textarea placeholder="Skills, preferred areas, what you'd like to contribute..." value={volNotes} onChange={(e) => setVolNotes(e.target.value)} />
+          </div>
+          <button className="wa-btn" type="button" onClick={handleVolunteer}>
+            <i className="ti ti-brand-whatsapp" /> Submit &amp; join via WhatsApp
+          </button>
+          <div className="info-note">
+            <i className="ti ti-info-circle" /> We'll add you to our volunteer WhatsApp group and confirm next steps within 2 hours.
           </div>
         </div>
       </section>
@@ -684,15 +928,18 @@ function Home({ activities, programs, stories, faqs, trust, videos }) {
           <div className="faq-filters">
             <div className="faq-filter-title">Jump to</div>
             <div className="faq-filter-list">
-              {['Donation', 'Volunteer', 'Trust'].map((tag, index) => (
-                <button
-                  key={tag}
-                  className={`faq-filter-btn ${faqOpen === index ? 'active' : ''}`}
-                  onClick={() => setFaqOpen(index)}
-                >
-                  <i className="ti ti-circle" /> {tag}
-                </button>
-              ))}
+              {['Donation', 'Volunteer', 'Trust'].map((tag) => {
+                const index = faqs.findIndex((f) => f.tag === tag);
+                return (
+                  <button
+                    key={tag}
+                    className={`faq-filter-btn ${faqOpen === index ? 'active' : ''}`}
+                    onClick={() => setFaqOpen(index)}
+                  >
+                    <i className="ti ti-circle" /> {tag}
+                  </button>
+                );
+              })}
             </div>
           </div>
           <div className="faq-list">
@@ -704,7 +951,7 @@ function Home({ activities, programs, stories, faqs, trust, videos }) {
                   onClick={() => setFaqOpen(index === faqOpen ? -1 : index)}
                 >
                   <div>
-                    <span className="faq-tag">{faq.tag}</span>
+                    <span className={`faq-tag faq-tag-${faq.tag.toLowerCase()}`}>{faq.tag}</span>
                     {faq.question}
                   </div>
                   <i className="ti ti-chevron-down" />
@@ -716,6 +963,32 @@ function Home({ activities, programs, stories, faqs, trust, videos }) {
         </div>
       </section>
 
+      {trustees.length > 0 && (
+        <section id="about">
+          <div className="section-header">
+            <div>
+              <div className="section-label">About us</div>
+              <h2 className="section-title">
+                Meet our <em>trustees</em>
+              </h2>
+            </div>
+          </div>
+          <div className="trustees-grid">
+            {trustees.map((person, index) => (
+              <div key={`${person.name}-${index}`} className="trustee-card">
+                {person.photo_url ? (
+                  <img src={person.photo_url} alt={person.name} className="trustee-photo" />
+                ) : (
+                  <div className="trustee-photo trustee-photo-placeholder">{person.name.charAt(0)}</div>
+                )}
+                <div className="trustee-name">{person.name}</div>
+                <div className="trustee-role">{person.role}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section id="trust">
         <div className="section-header">
           <div>
@@ -726,15 +999,50 @@ function Home({ activities, programs, stories, faqs, trust, videos }) {
           </div>
         </div>
         <div className="trust-grid">
-          {trust.map((item) => (
-            <div key={item.title} className="trust-card">
-              <i className="ti ti-shield-check" />
-              <div className="trust-card-title">{item.title}</div>
-              <div className="trust-card-val">{item.value}</div>
-            </div>
-          ))}
+          {trust.map((item) => {
+            const Card = item.doc_url ? 'a' : 'div';
+            const linkProps = item.doc_url
+              ? { href: item.doc_url, target: '_blank', rel: 'noopener noreferrer' }
+              : {};
+            return (
+              <Card key={item.title} className={`trust-card ${item.doc_url ? 'has-doc' : ''}`} {...linkProps}>
+                <i className="ti ti-shield-check" />
+                <div className="trust-card-title">{item.title}</div>
+                <div className="trust-card-val">{item.value}</div>
+                {item.doc_url && (
+                  <div className="trust-card-link">
+                    View certificate <i className="ti ti-external-link" />
+                  </div>
+                )}
+              </Card>
+            );
+          })}
         </div>
       </section>
+
+      {donors.length > 0 && (
+        <section id="donors">
+          <div className="section-label">Our partners</div>
+          <h2 className="section-title">
+            Major donors &amp; <em>partners</em>
+          </h2>
+          <div className="donors-grid">
+            {donors.map((donor, index) => (
+              <div key={`${donor.name}-${index}`} className="donor-card">
+                {donor.logo_url ? (
+                  <img src={donor.logo_url} alt={donor.name} className="donor-logo" />
+                ) : (
+                  <div className="donor-avatar">{donor.name.charAt(0)}</div>
+                )}
+                <div>
+                  <div className="donor-name">{donor.name}</div>
+                  <div className="donor-since">{donor.contribution}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section id="donate">
         <div className="section-label">Give hope</div>
@@ -811,7 +1119,7 @@ function Home({ activities, programs, stories, faqs, trust, videos }) {
           <div>
             <div className="footer-col-title">Support</div>
             <div className="footer-links">
-              <a href="#help">Volunteer</a>
+              <a href="#volunteer">Volunteer</a>
               <a href="#faq">FAQ</a>
               <a href="/Admin">Admin</a>
             </div>
@@ -821,6 +1129,9 @@ function Home({ activities, programs, stories, faqs, trust, videos }) {
             <div className="footer-links">
               <a href="mailto:info@swabhimaan.org">info@swabhimaan.org</a>
               <a href="tel:+918000000000">+91 80000 00000</a>
+              <a href={OFFICE_MAP_URL} target="_blank" rel="noopener noreferrer">
+                <i className="ti ti-map-pin" /> Find us on map
+              </a>
             </div>
           </div>
         </div>
@@ -843,6 +1154,8 @@ function App() {
   const [stories, setStories] = useState(defaultStories);
   const [faqs, setFaqs] = useState(defaultFaqs);
   const [trust, setTrust] = useState(defaultTrust);
+  const [trustees, setTrustees] = useState(defaultTrustees);
+  const [donors, setDonors] = useState(defaultDonors);
   const [videos, setVideos] = useState([]);
 
   useEffect(() => {
@@ -854,9 +1167,11 @@ function App() {
           fetch('/api/stories'),
           fetch('/api/faqs'),
           fetch('/api/trust'),
+          fetch('/api/trustees'),
+          fetch('/api/donors'),
           fetch('/api/videos'),
         ]);
-        const [activitiesData, programsData, storiesData, faqsData, trustData, videosData] = await Promise.all(
+        const [activitiesData, programsData, storiesData, faqsData, trustData, trusteesData, donorsData, videosData] = await Promise.all(
           responses.map((res) => (res.ok ? res.json() : null))
         );
         if (activitiesData) setActivities(activitiesData);
@@ -864,6 +1179,8 @@ function App() {
         if (storiesData) setStories(storiesData);
         if (faqsData) setFaqs(faqsData);
         if (trustData) setTrust(trustData);
+        if (trusteesData) setTrustees(trusteesData);
+        if (donorsData) setDonors(donorsData);
         if (videosData) setVideos(videosData);
       } catch (err) {
         console.warn('Backend fetch failed:', err);
@@ -880,18 +1197,21 @@ function App() {
           Swabhi<span>maan</span>
         </a>
         <ul className="nav-links">
+          <li><a href="#about">About</a></li>
           <li><a href="#activities">Activities</a></li>
           <li><a href="#programs">Programs</a></li>
           <li><a href="#help">How to help</a></li>
           <li><a href="#food-delivery">Send food</a></li>
+          <li><a href="#volunteer">Volunteer</a></li>
           <li><a href="#donate">Donate</a></li>
           <li><a href="#stories">Stories</a></li>
           <li><a href="#videos">Videos</a></li>
           <li><a href="#faq">FAQ</a></li>
           <li><a href="#trust">Trust</a></li>
+          <li><a href="#donors">Donors</a></li>
         </ul>
         <div className="nav-actions">
-          <a href="#help" className="btn btn-ghost">
+          <a href="#volunteer" className="btn btn-ghost">
             <i className="ti ti-users" /> Volunteer
           </a>
           <a href="#donate" className="btn btn-primary">
@@ -902,8 +1222,9 @@ function App() {
       <Routes>
         <Route
           path="/"
-          element={<Home activities={activities} programs={programs} stories={stories} faqs={faqs} trust={trust} videos={videos} />}
+          element={<Home activities={activities} programs={programs} stories={stories} faqs={faqs} trust={trust} trustees={trustees} donors={donors} videos={videos} />}
         />
+        <Route path="/programs/:slug" element={<ProgramDetail programs={programs} />} />
         <Route path="/Admin" element={<Admin />} />
       </Routes>
     </div>

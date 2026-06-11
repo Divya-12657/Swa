@@ -20,7 +20,7 @@ import requests
 import razorpay
 
 from db import engine, get_session
-from models import SQLModel, Video, Activity, Payment, FoodRequest, Donor
+from models import SQLModel, Video, Activity, Payment, FoodRequest, Donor, Volunteer
 from sqlmodel import Session as SQLSession
 
 AWS_S3_BUCKET = os.getenv("AWS_S3_BUCKET")
@@ -42,22 +42,94 @@ app.add_middleware(
 
 PROGRAMS = [
     {
+        "slug": "food-nutrition",
         "icon": "ti ti-basket",
+        "color": "#854F0B",
+        "image_url": "",
         "title": "Food & nutrition",
-        "description": "Daily grocery distribution reaching 500+ doorsteps.",
+        "description": "Daily grocery distribution reaching 500+ doorsteps. We address malnutrition and ensure no family goes to bed hungry.",
         "stat": "500+ families served daily",
+        "details": [
+            "Our food and nutrition program is the backbone of Swabhimaan's daily work. Every morning, our teams pack and deliver grocery kits, cooked meals, and ration supplies to families across Neelasandra, LR Nagar, Rajendranagar, Karesandra, and Subhashnagar — neighborhoods where daily-wage disruptions can mean the difference between a meal and an empty plate.",
+            "Each grocery kit is curated to provide a family of four with essential staples — rice, dal, oil, salt, spices, and other everyday items — for up to two weeks. For households with infants or elderly members, we add nutrition-dense supplements such as milk powder, eggs, and fortified cereals based on need assessments done by our field volunteers.",
+            "Beyond emergency relief, we run a 'Cooked Meals' initiative in partnership with local kitchens to serve hot, hygienic meals to construction workers, the elderly living alone, and children who would otherwise go hungry between school and home. We track every delivery so donors can see exactly how their contribution turns into a meal on someone's table.",
+            "Donors can sponsor a single grocery kit, fund a month of cooked meals for a family, or set up a recurring monthly contribution. Every food request raised through our 'Send food' form is verified by a local volunteer before delivery, and photo updates are shared with the donor and posted to our community feed.",
+        ],
     },
     {
+        "slug": "education-support",
         "icon": "ti ti-school",
+        "color": "#0F6E56",
+        "image_url": "",
         "title": "Education support",
-        "description": "After-school classes, scholarships, and career mentoring.",
+        "description": "After-school classes, scholarships, and career mentoring for children from underserved neighborhoods.",
         "stat": "200+ children supported",
+        "details": [
+            "Education is the clearest path out of generational poverty, and our education program is built around making sure no child drops out for lack of support at home. We run free after-school tuition centers staffed by trained volunteers and part-time teachers, covering core subjects for students from grade 1 through grade 10.",
+            "Each year, Swabhimaan awards need-based scholarships to high-performing students to cover school fees, books, uniforms, and exam costs. Recipients are chosen through a transparent process involving school records, household income verification, and interviews with parents, and progress is reviewed every term to ensure the support continues to make a difference.",
+            "Our career mentoring track connects students in grades 9-12 with volunteer professionals — engineers, doctors, designers, and entrepreneurs — who run monthly sessions on career options, college applications, scholarships for higher education, and basic digital and English-language skills that are often the biggest barrier to opportunity.",
+            "We also run digital literacy labs equipped with donated laptops and tablets, where children learn typing, internet basics, and how to use educational apps — skills that are increasingly essential but rarely taught in under-resourced government schools.",
+        ],
     },
     {
+        "slug": "healthcare-access",
         "icon": "ti ti-stethoscope",
+        "color": "#185FA5",
+        "image_url": "",
         "title": "Healthcare access",
-        "description": "Health camps, screenings, and medicine for low-income families.",
+        "description": "Regular health camps, screenings, and medicine distribution for families in need.",
         "stat": "4 community camps monthly",
+        "details": [
+            "Many families in the communities we serve delay or skip medical care entirely because of cost, distance, or lack of awareness. Our healthcare access program brings basic diagnostic and treatment services directly to neighborhoods through monthly camps held in partnership with local clinics, hospitals, and volunteer doctors.",
+            "A typical camp includes general health checkups, blood pressure and blood sugar screening, eye checkups, and basic dental screening. Patients identified with conditions requiring further care are referred to partner hospitals, and where possible, we help coordinate subsidized treatment or connect families with government health schemes they're eligible for but unaware of.",
+            "We maintain a small revolving stock of common medicines — for fever, infections, diabetes, and hypertension — that are distributed free of cost during camps and through our community health volunteers between camps. Every distribution is logged so we can track recurring needs and plan future camps accordingly.",
+            "Alongside clinical care, we run awareness sessions on hygiene, maternal health, nutrition during pregnancy, and preventive care for common illnesses — because the biggest health gains often come from simple knowledge that prevents a problem before it starts.",
+        ],
+    },
+    {
+        "slug": "livelihood-skills",
+        "icon": "ti ti-tool",
+        "color": "#6D4AFF",
+        "image_url": "",
+        "title": "Livelihood & skill training",
+        "description": "Vocational training in tailoring, computer skills, and trades that help adults build sustainable income.",
+        "stat": "150+ adults trained",
+        "details": [
+            "Sustainable change comes from steady income, not one-time aid. Our livelihood program runs short, practical vocational courses — tailoring and embroidery, basic computer operation, mobile repair, and beauty & wellness — designed around skills with real, local demand so graduates can start earning quickly.",
+            "Each batch runs for 6-10 weeks and is led by experienced trainers, often graduates of earlier batches themselves. Participants receive the tools or starter kits they need to begin working immediately after completing the course — a sewing machine for tailoring graduates, or a basic toolkit for mobile repair trainees.",
+            "We work with local shop owners, tailoring units, and small businesses to connect graduates with job openings, and support a few participants each year in setting up micro-enterprises from home, with small seed grants and ongoing mentorship from our volunteer business advisors.",
+            "Many of our livelihood batches are run specifically for women who manage households and need flexible, nearby training options — feeding directly into our women's empowerment self-help groups.",
+        ],
+    },
+    {
+        "slug": "women-empowerment",
+        "icon": "ti ti-heart-handshake",
+        "color": "#C2185B",
+        "image_url": "",
+        "title": "Women empowerment",
+        "description": "Self-help groups, financial literacy, and leadership programs that help women become decision-makers in their families and communities.",
+        "stat": "30+ self-help groups active",
+        "details": [
+            "We organize women into self-help groups (SHGs) of 10-15 members each, who meet weekly to save small amounts collectively, access low-interest group loans, and support each other through shared challenges. Today, more than 30 active groups across our program areas manage their own savings and lending with guidance from our field staff.",
+            "Financial literacy sessions cover budgeting, banking, digital payments, and understanding government schemes for women entrepreneurs — knowledge that is often new to women who have never had a bank account of their own before joining an SHG.",
+            "Leadership training identifies women within each group to take on roles as group leaders, community health volunteers, and local representatives — building a pipeline of women who go on to advocate for their communities on issues like sanitation, school access, and safety.",
+            "SHG members are also prioritized for our livelihood training batches, creating a direct path from financial literacy to income generation to leadership — a cycle that compounds impact across entire families and neighborhoods.",
+        ],
+    },
+    {
+        "slug": "community-environment",
+        "icon": "ti ti-leaf",
+        "color": "#2E7D32",
+        "image_url": "",
+        "title": "Community awareness & environment",
+        "description": "Awareness drives on hygiene, sanitation, civic rights, and environmental sustainability to build healthier, cleaner neighborhoods.",
+        "stat": "12+ awareness drives yearly",
+        "details": [
+            "Lasting change in a neighborhood depends on more than individual support — it needs collective awareness and action. We run regular campaigns on hygiene and sanitation, helping households adopt practices like handwashing, safe drinking water storage, and proper waste disposal that significantly reduce illness, especially among children.",
+            "Our civic rights workshops help residents understand and access entitlements like ration cards, Aadhaar-linked benefits, voter registration, and grievance redressal processes — paperwork and systems that can otherwise feel impenetrable to first-generation literate families.",
+            "On the environmental side, we organize tree plantation drives, waste segregation awareness campaigns, and clean-up drives in partnership with local resident associations, turning community spaces into shared responsibilities rather than neglected areas.",
+            "We also run disaster-preparedness sessions ahead of monsoon season, helping vulnerable households understand flood risks, emergency contacts, and basic preparedness steps — a small investment that has prevented major losses in past years.",
+        ],
     },
 ]
 
@@ -98,9 +170,24 @@ FAQS = [
 ]
 
 TRUST = [
-    {"title": "Registered trust", "value": "Section 12A registered"},
-    {"title": "80G exemption", "value": "Tax benefit for donors"},
-    {"title": "FCRA compliant", "value": "International funding ready"},
+    {"title": "Registered trust", "value": "Section 12A registered", "doc_url": ""},
+    {"title": "80G exemption", "value": "Tax benefit for donors", "doc_url": ""},
+    {"title": "FCRA compliant", "value": "International funding ready", "doc_url": ""},
+]
+
+MAJOR_DONORS = [
+    {"name": "Acme Corporation", "contribution": "Platinum partner", "logo_url": ""},
+    {"name": "Example Foundation", "contribution": "CSR program sponsor", "logo_url": ""},
+    {"name": "Sunrise Industries", "contribution": "Annual food drive sponsor", "logo_url": ""},
+]
+
+TRUSTEES = [
+    {"name": "Trustee Name 1", "role": "Founder & Managing Trustee", "photo_url": ""},
+    {"name": "Trustee Name 2", "role": "Trustee", "photo_url": ""},
+    {"name": "Trustee Name 3", "role": "Trustee", "photo_url": ""},
+    {"name": "Trustee Name 4", "role": "Trustee", "photo_url": ""},
+    {"name": "Trustee Name 5", "role": "Trustee", "photo_url": ""},
+    {"name": "Trustee Name 6", "role": "Trustee", "photo_url": ""},
 ]
 
 VIDEO_POSTS: List[dict] = []
@@ -157,6 +244,15 @@ class FoodRequestCreate(BaseModel):
     area: str
     preferred_date: Optional[str] = None
     qty: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class VolunteerCreate(BaseModel):
+    name: str
+    phone: str
+    purpose: str  # "donation" or "services"
+    interest_area: Optional[str] = None
+    availability: Optional[str] = None
     notes: Optional[str] = None
 
 
@@ -306,6 +402,16 @@ def list_trust():
     return TRUST
 
 
+@app.get("/api/donors")
+def list_donors():
+    return MAJOR_DONORS
+
+
+@app.get("/api/trustees")
+def list_trustees():
+    return TRUSTEES
+
+
 @app.get("/api/videos")
 def list_videos():
     with SQLSession(engine) as session:
@@ -446,6 +552,36 @@ def list_food_requests(
 ):
     verify_admin_token(x_admin_token)
     return session.exec(select(FoodRequest).order_by(FoodRequest.created_at.desc())).all()
+
+
+@app.post("/api/volunteers", status_code=201)
+def create_volunteer(
+    payload: VolunteerCreate,
+    session: SQLSession = Depends(get_session),
+):
+    donor = get_or_create_donor(session, payload.phone, payload.name)
+    volunteer = Volunteer(
+        donor_id=donor.id if donor else None,
+        name=payload.name,
+        phone=payload.phone,
+        purpose=payload.purpose,
+        interest_area=payload.interest_area,
+        availability=payload.availability,
+        notes=payload.notes,
+    )
+    session.add(volunteer)
+    session.commit()
+    session.refresh(volunteer)
+    return {"id": volunteer.id, "status": volunteer.status, "donor_id": volunteer.donor_id}
+
+
+@app.get("/api/volunteers")
+def list_volunteers(
+    x_admin_token: Optional[str] = Header(None, alias="X-Admin-Token"),
+    session: SQLSession = Depends(get_session),
+):
+    verify_admin_token(x_admin_token)
+    return session.exec(select(Volunteer).order_by(Volunteer.created_at.desc())).all()
 
 
 @app.post("/api/payments/create")
