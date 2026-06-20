@@ -308,6 +308,7 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
   const [fdDate, setFdDate] = useState('');
   const [fdQty, setFdQty] = useState('');
   const [fdNotes, setFdNotes] = useState('');
+  const [fdSubmitted, setFdSubmitted] = useState(false);
 
   async function handleSendFood() {
     const lines = [
@@ -339,6 +340,7 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
       // still open WhatsApp even if DB save fails
     }
     window.open(`https://wa.me/9945277470?text=${encodeURIComponent(lines.join('\n'))}`, '_blank');
+    setFdSubmitted(true);
   }
 
   const interestAreas = [
@@ -355,6 +357,7 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
   const [volInterest, setVolInterest] = useState(interestAreas[0]);
   const [volAvailability, setVolAvailability] = useState('Weekends');
   const [volNotes, setVolNotes] = useState('');
+  const [volSubmitted, setVolSubmitted] = useState(false);
 
   async function handleVolunteer() {
     const lines = [
@@ -386,6 +389,7 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
       // still open WhatsApp even if DB save fails
     }
     window.open(`https://wa.me/9945436757?text=${encodeURIComponent(lines.join('\n'))}`, '_blank');
+    setVolSubmitted(true);
   }
 
   const [donorName, setDonorName] = useState('');
@@ -575,7 +579,6 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
         </p>
         <div className="calc-wrap">
           <div className="calc-slider-row">
-            <span className="calc-label">Monthly donation</span>
             <input
               type="range"
               min="100"
@@ -584,7 +587,10 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
               value={donationAmount}
               onChange={(event) => setDonationAmount(Number(event.target.value))}
             />
-            <span className="calc-amount">₹{donationAmount}</span>
+            <div className="calc-slider-label-row">
+              <span className="calc-label">Monthly donation</span>
+              <span className="calc-amount">₹{donationAmount}</span>
+            </div>
           </div>
           <div className="calc-outcomes">
             <div className="outcome-card">
@@ -680,6 +686,17 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
         <p className="section-sub">Fill the form below. We confirm within 2 hours via WhatsApp, coordinate delivery, and send you photos once families receive their food.</p>
         <div className="delivery-layout">
           <div className="form-panel">
+            {fdSubmitted ? (
+              <div className="form-success">
+                <div className="form-success-icon"><i className="ti ti-circle-check" /></div>
+                <h3>Request sent!</h3>
+                <p>We've opened WhatsApp with your food delivery details. Send the message to confirm — our team will reply within 2 hours and share photos once it's delivered.</p>
+                <button className="btn btn-ghost" type="button" onClick={() => setFdSubmitted(false)}>
+                  <i className="ti ti-edit" /> Submit another request
+                </button>
+              </div>
+            ) : (
+              <>
             <div className="step-indicator">
               <div className="step-item active"><div className="step-dot">1</div><span>Request</span></div>
               <div className="step-line" />
@@ -746,6 +763,8 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
             <div className="info-note">
               <i className="ti ti-info-circle" /> We confirm within 2 hours. Post-delivery, photos are shared on WhatsApp and posted to the website.
             </div>
+              </>
+            )}
           </div>
           <div className="wa-preview-panel">
             <div className="preview-label">
@@ -788,6 +807,17 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
         <h2 className="section-title">Join the team — <em>confirmed via WhatsApp</em></h2>
         <p className="section-sub">Tell us how you'd like to help. We'll add you to the right WhatsApp group and follow up within 2 hours.</p>
         <div className="form-panel volunteer-panel">
+          {volSubmitted ? (
+            <div className="form-success">
+              <div className="form-success-icon"><i className="ti ti-circle-check" /></div>
+              <h3>You're in!</h3>
+              <p>We've opened WhatsApp with your details. Send the message and we'll add you to the right group and follow up within 2 hours.</p>
+              <button className="btn btn-ghost" type="button" onClick={() => setVolSubmitted(false)}>
+                <i className="ti ti-edit" /> Submit another response
+              </button>
+            </div>
+          ) : (
+            <>
           <div className="field-row">
             <div className="field-group">
               <label className="field-label">Your name</label>
@@ -849,6 +879,8 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
           <div className="info-note">
             <i className="ti ti-info-circle" /> We'll add you to our volunteer WhatsApp group and confirm next steps within 2 hours.
           </div>
+            </>
+          )}
         </div>
       </section>
 
@@ -1128,7 +1160,7 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
             <div className="footer-col-title">Contact</div>
             <div className="footer-links">
               <a href="mailto:info@swabhimaan.org">info@swabhimaan.org</a>
-              <a href="tel:+918000000000">+91 80000 00000</a>
+              <a href="tel:+919945436757">+91 99454 36757</a>
               <a href={OFFICE_MAP_URL} target="_blank" rel="noopener noreferrer">
                 <i className="ti ti-map-pin" /> Find us on map
               </a>
@@ -1136,7 +1168,7 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
           </div>
         </div>
         <div className="footer-bottom">
-          <div>© 2026 Swabhimaan NGO · Built for mobile and laptop users</div>
+          <div>© 2026 Swabhimaan NGO · Built for users</div>
           <div className="cert-badges">
             <span className="cert-badge">80G</span>
             <span className="cert-badge">FCRA</span>

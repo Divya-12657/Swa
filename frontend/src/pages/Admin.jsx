@@ -211,7 +211,7 @@ function Admin() {
 
         {/* ── ACTIVITIES TAB ─────────────────────────── */}
         {tab === 'activities' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: 32, alignItems: 'start' }}>
+          <div className="admin-activities-grid">
             <div className="prog-card">
               <div className="prog-title" style={{ marginBottom: 20 }}>Post a new activity</div>
               <form onSubmit={handleActSubmit}>
