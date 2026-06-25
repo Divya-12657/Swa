@@ -229,7 +229,9 @@ class ActivityCreate(BaseModel):
 def _activity_dict(a: Activity) -> dict:
     d = {
         "id": a.id, "category": a.category, "title": a.title,
-        "location": a.location, "reach": a.reach, "badge": a.badge,
+        "location": a.location, "reach": a.reach,
+        "description": a.description,
+        "badge": a.badge,
         "icon": a.icon, "date": a.date, "color": a.color,
         "image_url": a.image_url,
         "images": json.loads(a.images) if a.images else [],

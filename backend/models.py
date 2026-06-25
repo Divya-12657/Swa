@@ -19,6 +19,7 @@ class Activity(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     category: str
     title: str
+    description: Optional[str] = None  # Blog content or activity description
     location: Optional[str] = None
     reach: Optional[str] = None
     badge: Optional[str] = None
@@ -27,6 +28,7 @@ class Activity(SQLModel, table=True):
     color: Optional[str] = None
     image_url: Optional[str] = None
     images: Optional[str] = None  # JSON-encoded list of URLs
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class Donor(SQLModel, table=True):

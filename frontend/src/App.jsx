@@ -282,6 +282,12 @@ function getYoutubeEmbed(url) {
 function Home({ activities, programs, stories, faqs, trust, trustees, donors, videos }) {
   const [galleryActivity, setGalleryActivity] = useState(null);
   const [showAllActivities, setShowAllActivities] = useState(false);
+  const [expandedCards, setExpandedCards] = useState(new Set());
+  const toggleExpand = (id) => setExpandedCards(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
   const [donationAmount, setDonationAmount] = useState(500);
 
   const impact = useMemo(() => {
@@ -534,26 +540,46 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
                 key={activity.id || activity.title}
                 className={`act-card ${activity.featured ? 'featured' : ''}`}
               >
-                <div
-                  className={`act-img-area ${!hasImages ? (activity.badge || 'act-img-food') : ''}`}
-                  style={hasImages ? { backgroundImage: `url(${imgs[0]})` } : {}}
-                >
-                  {!hasImages && <i className={activity.icon} style={{ fontSize: '2.5rem', color: activity.color }} />}
-                  <div className="act-date-badge">{activity.date}</div>
-                  {imgs.length > 1 && <div className="act-img-count"><i className="ti ti-photo" /> {imgs.length}</div>}
-                </div>
                 <div className="act-body">
                   <span className={`act-badge ${activity.badge}`}>{activity.category}</span>
-                  <div className="act-title">{activity.title}</div>
-                  <div className="act-card-desc">
-                    {activity.location && <span><i className="ti ti-map-pin" /> {activity.location}</span>}
-                    {activity.reach && <span><i className="ti ti-users" /> {activity.reach}</span>}
+                  <div className="act-title-xl">
+                    {activity.title} <i className="ti ti-arrow-right act-title-arrow" />
                   </div>
-                  {hasImages && (
-                    <button className="act-action-btn" onClick={() => setGalleryActivity(activity)}>
-                      View Pictures <i className="ti ti-arrow-right" />
-                    </button>
-                  )}
+                  <div
+                    className={`act-stack${hasImages ? ' act-stack-clickable' : ''}`}
+                    onClick={() => hasImages && setGalleryActivity(activity)}
+                  >
+                    {hasImages
+                      ? imgs.slice(0, 3).map((url, i) => (
+                          <div key={i} className="act-stack-img" style={{ backgroundImage: `url(${url})` }} />
+                        ))
+                      : <div className={`act-stack-placeholder ${activity.badge || ''}`}>
+                          <i className={activity.icon} style={{ color: activity.color }} />
+                        </div>
+                    }
+                    {hasImages && imgs.length > 1 && (
+                      <div className="act-stack-count"><i className="ti ti-photo" /> {imgs.length}</div>
+                    )}
+                  </div>
+                  <div className="act-pills">
+                    {activity.date && <span><i className="ti ti-calendar" /> {activity.date}</span>}
+                    {activity.location && <span><i className="ti ti-map-pin" /> {activity.location}</span>}
+                  </div>
+                  {activity.reach && (() => {
+                    const key = (activity.id || activity.title) + '-reach';
+                    const isExpanded = expandedCards.has(key);
+                    const isLong = activity.reach.length > 80;
+                    return (
+                      <div className="act-card-desc act-card-desc-text">
+                        {isExpanded || !isLong ? activity.reach : activity.reach.substring(0, 80) + '…'}
+                        {isLong && (
+                          <button className="read-more-btn" type="button" onClick={() => toggleExpand(key)}>
+                            {isExpanded ? ' Show less' : ' Read more'}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             );
@@ -884,6 +910,69 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
         </div>
       </section>
 
+      <section id="blogs">
+        <div className="section-label">Latest insights</div>
+        <h2 className="section-title">Impact stories & <em>updates</em></h2>
+        <p className="section-sub">Read about our programs, community achievements, and the lives we're transforming.</p>
+        <div className="activity-grid">
+          {activities.filter(a => a.badge === 'blog').slice(0, 6).map((blog) => {
+            const imgs = blog.images?.length
+              ? blog.images
+              : blog.image_url ? [blog.image_url] : [];
+            const hasImages = imgs.length > 0;
+            return (
+              <div key={blog.id} className="act-card">
+                <div className="act-body">
+                  <span className="act-badge b-blog">{blog.category}</span>
+                  <div className="act-title-xl">
+                    {blog.title} <i className="ti ti-arrow-right act-title-arrow" />
+                  </div>
+                  <div
+                    className={`act-stack${hasImages ? ' act-stack-clickable' : ''}`}
+                    onClick={() => hasImages && setGalleryActivity(blog)}
+                  >
+                    {hasImages
+                      ? imgs.slice(0, 3).map((url, i) => (
+                          <div key={i} className="act-stack-img" style={{ backgroundImage: `url(${url})` }} />
+                        ))
+                      : <div className="act-stack-placeholder b-blog">
+                          <i className="ti ti-news" style={{ color: '#0B6B8C' }} />
+                        </div>
+                    }
+                    {hasImages && imgs.length > 1 && (
+                      <div className="act-stack-count"><i className="ti ti-photo" /> {imgs.length}</div>
+                    )}
+                  </div>
+                  <div className="act-pills">
+                    {blog.date && <span><i className="ti ti-calendar" /> {blog.date}</span>}
+                    {blog.location && <span><i className="ti ti-map-pin" /> {blog.location}</span>}
+                    {blog.reach && <span><i className="ti ti-users" /> {blog.reach}</span>}
+                  </div>
+                  {(blog.description || blog.reach) && (() => {
+                    const key = blog.id || blog.title;
+                    const isExpanded = expandedCards.has(key);
+                    const fullText = blog.description
+                      ? blog.description.replace(/<[^>]*>/g, '')
+                      : blog.reach;
+                    const isLong = fullText.length > 120;
+                    return (
+                      <div className="act-card-desc act-card-desc-text">
+                        {isExpanded || !isLong ? fullText : fullText.substring(0, 120) + '…'}
+                        {isLong && (
+                          <button className="read-more-btn" type="button" onClick={() => toggleExpand(key)}>
+                            {isExpanded ? ' Show less' : ' Read more'}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
       <section id="stories">
         <div className="section-label">Impact stories</div>
         <h2 className="section-title">
@@ -1144,6 +1233,7 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
             <div className="footer-col-title">Explore</div>
             <div className="footer-links">
               <a href="#activities">Activities</a>
+              <a href="#blogs">Blogs</a>
               <a href="#programs">Programs</a>
               <a href="#donate">Donate</a>
             </div>
