@@ -346,7 +346,7 @@ def health():
 
 @app.get("/api/activities")
 def list_activities(session: SQLSession = Depends(get_session)):
-    results = session.exec(select(Activity)).all()
+    results = session.exec(select(Activity).order_by(Activity.created_at.desc())).all()
     if results:
         return [_activity_dict(a) for a in results]
     # fallback data

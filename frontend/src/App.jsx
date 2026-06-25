@@ -461,11 +461,13 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
             <i className="ti ti-map-pin" /> Bengaluru · Serving since 2000
           </a>
           <h1>
-            Enabling dignity,
+            To be kind is more important than to be right.
             <br />
-            <em>one family</em>
+            <em>Many times what people need is not brilliant mind that speaks,</em>
             <br />
-            at a time.
+            But a speacial heart that listens.
+            <br />
+            -F. Scott Fitzgerald,
           </h1>
           <p>
             Swabhimaan works in the slum neighborhoods of Bengaluru — feeding 500+ people daily, educating children, empowering women through micro-lending, and providing healthcare to those who need it most.
@@ -523,9 +525,9 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
               Latest <em>activities</em>
             </h2>
           </div>
-          {!showAllActivities && activities.length > 4 && (
-            <button className="see-all" style={{ background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => setShowAllActivities(true)}>
-              View all activities <i className="ti ti-arrow-right" />
+          {activities.length > 4 && (
+            <button className="see-all" style={{ background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => setShowAllActivities(v => !v)}>
+              {showAllActivities ? 'Show less' : `View all ${activities.length}`} <i className={`ti ti-arrow-${showAllActivities ? 'up' : 'right'}`} />
             </button>
           )}
         </div>
@@ -565,13 +567,16 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
                     {activity.date && <span><i className="ti ti-calendar" /> {activity.date}</span>}
                     {activity.location && <span><i className="ti ti-map-pin" /> {activity.location}</span>}
                   </div>
-                  {activity.reach && (() => {
-                    const key = (activity.id || activity.title) + '-reach';
+                  {(activity.description || activity.reach) && (() => {
+                    const key = (activity.id || activity.title) + '-desc';
                     const isExpanded = expandedCards.has(key);
-                    const isLong = activity.reach.length > 80;
+                    const fullText = activity.description
+                      ? activity.description.replace(/<[^>]*>/g, '').trim()
+                      : activity.reach;
+                    const isLong = fullText.length > 120;
                     return (
                       <div className="act-card-desc act-card-desc-text">
-                        {isExpanded || !isLong ? activity.reach : activity.reach.substring(0, 80) + '…'}
+                        {isExpanded || !isLong ? fullText : fullText.substring(0, 120) + '…'}
                         {isLong && (
                           <button className="read-more-btn" type="button" onClick={() => toggleExpand(key)}>
                             {isExpanded ? ' Show less' : ' Read more'}
@@ -591,6 +596,7 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
               Show less <i className="ti ti-arrow-up" />
             </button>
           </div>
+
         )}
         {galleryActivity && <Gallery activity={galleryActivity} onClose={() => setGalleryActivity(null)} />}
       </section>
@@ -729,8 +735,6 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
               <div className="step-item"><div className="step-dot">2</div><span>WA confirm</span></div>
               <div className="step-line" />
               <div className="step-item"><div className="step-dot">3</div><span>Delivery</span></div>
-              <div className="step-line" />
-              <div className="step-item"><div className="step-dot">4</div><span>Photos posted</span></div>
             </div>
             <div className="field-row">
               <div className="field-group">
@@ -910,68 +914,6 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
         </div>
       </section>
 
-      <section id="blogs">
-        <div className="section-label">Latest insights</div>
-        <h2 className="section-title">Impact stories & <em>updates</em></h2>
-        <p className="section-sub">Read about our programs, community achievements, and the lives we're transforming.</p>
-        <div className="activity-grid">
-          {activities.filter(a => a.badge === 'blog').slice(0, 6).map((blog) => {
-            const imgs = blog.images?.length
-              ? blog.images
-              : blog.image_url ? [blog.image_url] : [];
-            const hasImages = imgs.length > 0;
-            return (
-              <div key={blog.id} className="act-card">
-                <div className="act-body">
-                  <span className="act-badge b-blog">{blog.category}</span>
-                  <div className="act-title-xl">
-                    {blog.title} <i className="ti ti-arrow-right act-title-arrow" />
-                  </div>
-                  <div
-                    className={`act-stack${hasImages ? ' act-stack-clickable' : ''}`}
-                    onClick={() => hasImages && setGalleryActivity(blog)}
-                  >
-                    {hasImages
-                      ? imgs.slice(0, 3).map((url, i) => (
-                          <div key={i} className="act-stack-img" style={{ backgroundImage: `url(${url})` }} />
-                        ))
-                      : <div className="act-stack-placeholder b-blog">
-                          <i className="ti ti-news" style={{ color: '#0B6B8C' }} />
-                        </div>
-                    }
-                    {hasImages && imgs.length > 1 && (
-                      <div className="act-stack-count"><i className="ti ti-photo" /> {imgs.length}</div>
-                    )}
-                  </div>
-                  <div className="act-pills">
-                    {blog.date && <span><i className="ti ti-calendar" /> {blog.date}</span>}
-                    {blog.location && <span><i className="ti ti-map-pin" /> {blog.location}</span>}
-                    {blog.reach && <span><i className="ti ti-users" /> {blog.reach}</span>}
-                  </div>
-                  {(blog.description || blog.reach) && (() => {
-                    const key = blog.id || blog.title;
-                    const isExpanded = expandedCards.has(key);
-                    const fullText = blog.description
-                      ? blog.description.replace(/<[^>]*>/g, '')
-                      : blog.reach;
-                    const isLong = fullText.length > 120;
-                    return (
-                      <div className="act-card-desc act-card-desc-text">
-                        {isExpanded || !isLong ? fullText : fullText.substring(0, 120) + '…'}
-                        {isLong && (
-                          <button className="read-more-btn" type="button" onClick={() => toggleExpand(key)}>
-                            {isExpanded ? ' Show less' : ' Read more'}
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
 
       <section id="stories">
         <div className="section-label">Impact stories</div>
@@ -1233,7 +1175,6 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
             <div className="footer-col-title">Explore</div>
             <div className="footer-links">
               <a href="#activities">Activities</a>
-              <a href="#blogs">Blogs</a>
               <a href="#programs">Programs</a>
               <a href="#donate">Donate</a>
             </div>
@@ -1271,6 +1212,8 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
 }
 
 function App() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const closeMenu = () => setMenuOpen(false);
   const [activities, setActivities] = useState(defaultActivities);
   const [programs, setPrograms] = useState(defaultPrograms);
   const [stories, setStories] = useState(defaultStories);
@@ -1340,7 +1283,35 @@ function App() {
             <i className="ti ti-heart" /> Donate
           </a>
         </div>
+        <button className="nav-hamburger" onClick={() => setMenuOpen(v => !v)} aria-label="Menu">
+          <i className={menuOpen ? 'ti ti-x' : 'ti ti-menu-2'} />
+        </button>
       </nav>
+      {menuOpen && (
+        <div className="mobile-menu">
+          <ul>
+            <li><a href="#about" onClick={closeMenu}>About</a></li>
+            <li><a href="#activities" onClick={closeMenu}>Activities</a></li>
+            <li><a href="#programs" onClick={closeMenu}>Programs</a></li>
+            <li><a href="#help" onClick={closeMenu}>How to help</a></li>
+            <li><a href="#food-delivery" onClick={closeMenu}>Send food</a></li>
+            <li><a href="#volunteer" onClick={closeMenu}>Volunteer</a></li>
+            <li><a href="#stories" onClick={closeMenu}>Stories</a></li>
+            <li><a href="#videos" onClick={closeMenu}>Videos</a></li>
+            <li><a href="#faq" onClick={closeMenu}>FAQ</a></li>
+            <li><a href="#trust" onClick={closeMenu}>Trust</a></li>
+            <li><a href="#donors" onClick={closeMenu}>Donors</a></li>
+          </ul>
+          <div className="mobile-menu-actions">
+            <a href="#donate" className="btn btn-primary" style={{ justifyContent: 'center' }} onClick={closeMenu}>
+              <i className="ti ti-heart" /> Donate now
+            </a>
+            <a href="#volunteer" className="btn btn-ghost" style={{ justifyContent: 'center' }} onClick={closeMenu}>
+              <i className="ti ti-users" /> Volunteer
+            </a>
+          </div>
+        </div>
+      )}
       <Routes>
         <Route
           path="/"

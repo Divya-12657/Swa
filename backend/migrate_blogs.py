@@ -39,7 +39,7 @@ def parse_date(date_str):
     try:
         clean = date_str.split("GMT")[0].strip()
         dt = datetime.strptime(clean, "%a %b %d %Y %H:%M:%S")
-        return dt.strftime("%-d %b %Y")  # e.g. "20 Feb 2023"
+        return f"{dt.day} {dt.strftime('%b %Y')}"  # e.g. "20 Feb 2023"
     except Exception:
         return None
 
