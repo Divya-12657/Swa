@@ -1,5 +1,72 @@
 import { useEffect, useState } from 'react';
 
+function SettingsTab({ token }) {
+  const SITE_SETTINGS = [
+    { key: 'hero_bg_url', label: 'Hero background image', hint: 'Shown as a subtle background behind the homepage quote & description.' },
+  ];
+  const [vals, setVals] = useState({});
+  const [uploading, setUploading] = useState({});
+  const [msgs, setMsgs] = useState({});
+
+  useEffect(() => {
+    fetch('/api/settings').then(r => r.json()).then(setVals).catch(() => {});
+  }, []);
+
+  async function handleUpload(key, e) {
+    const file = e.target.files?.[0]; if (!file) return; e.target.value = '';
+    setUploading(u => ({ ...u, [key]: true }));
+    const fd = new FormData(); fd.append('file', file);
+    try {
+      const res = await fetch('/api/upload-image', { method: 'POST', body: fd });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.detail || 'Upload failed');
+      await fetch(`/api/admin/settings/${key}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
+        body: JSON.stringify({ value: result.url }),
+      });
+      setVals(v => ({ ...v, [key]: result.url }));
+      setMsgs(m => ({ ...m, [key]: '✅ Saved' }));
+    } catch (err) { setMsgs(m => ({ ...m, [key]: `❌ ${err.message}` })); }
+    finally { setUploading(u => ({ ...u, [key]: false })); }
+  }
+
+  async function handleClear(key) {
+    await fetch(`/api/admin/settings/${key}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
+      body: JSON.stringify({ value: '' }),
+    });
+    setVals(v => ({ ...v, [key]: '' }));
+    setMsgs(m => ({ ...m, [key]: '✅ Cleared' }));
+  }
+
+  return (
+    <div style={{ maxWidth: 640 }}>
+      <p style={{ fontSize: '0.875rem', color: 'var(--ink-mid)', marginBottom: 24 }}>Site-wide settings. Changes take effect after page refresh.</p>
+      {SITE_SETTINGS.map(({ key, label, hint }) => (
+        <div key={key} style={{ padding: '18px 20px', border: '1px solid var(--border)', borderRadius: 12, background: 'var(--white)', marginBottom: 16 }}>
+          <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: 4 }}>{label}</div>
+          <div style={{ fontSize: '0.78rem', color: 'var(--ink-light)', marginBottom: 12 }}>{hint}</div>
+          {vals[key] && (
+            <div style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <img src={vals[key]} alt="" style={{ width: 120, height: 70, objectFit: 'cover', borderRadius: 8 }} />
+              <button onClick={() => handleClear(key)} style={{ fontSize: '0.78rem', color: '#c00', background: 'none', border: '1px solid #c00', borderRadius: 20, padding: '4px 12px', cursor: 'pointer' }}>Remove</button>
+            </div>
+          )}
+          {msgs[key] && <div style={{ fontSize: '0.75rem', marginBottom: 8 }}>{msgs[key]}</div>}
+          <label>
+            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleUpload(key, e)} disabled={uploading[key]} />
+            <span style={{ display: 'inline-block', padding: '7px 16px', background: 'var(--saffron)', color: '#fff', borderRadius: 20, fontSize: '0.8rem', fontWeight: 500, cursor: uploading[key] ? 'wait' : 'pointer' }}>
+              {uploading[key] ? 'Uploading…' : vals[key] ? 'Change image' : 'Upload image'}
+            </span>
+          </label>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const CATEGORY_META = {
   'Food drive':        { badge: 'b-food',   icon: 'ti ti-basket',           color: '#854F0B' },
   'Education':         { badge: 'b-edu',    icon: 'ti ti-school',           color: '#0F6E56' },
@@ -99,6 +166,87 @@ function Admin() {
     setActImages(imgs => imgs.filter((_, i) => i !== idx));
   }
 
+  // ── Programs ─────────────────────────────────────────────
+  const [programs, setPrograms] = useState([]);
+  const [progMsg, setProgMsg] = useState({});
+  const [progUploading, setProgUploading] = useState({});
+
+  useEffect(() => {
+    fetch('/api/programs').then(r => r.json()).then(setPrograms).catch(() => {});
+  }, []);
+
+  async function handleProgImageUpload(slug, e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setProgUploading(p => ({ ...p, [slug]: true }));
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await fetch('/api/upload-image', { method: 'POST', body: fd });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.detail || 'Upload failed');
+      await fetch(`/api/admin/programs/${slug}/image`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
+        body: JSON.stringify({ image_url: result.url }),
+      });
+      setPrograms(prev => prev.map(p => p.slug === slug ? { ...p, image_url: result.url } : p));
+      setProgMsg(m => ({ ...m, [slug]: '✅ Image updated' }));
+    } catch (err) {
+      setProgMsg(m => ({ ...m, [slug]: `❌ ${err.message}` }));
+    } finally {
+      setProgUploading(p => ({ ...p, [slug]: false }));
+    }
+  }
+
+  // ── Trustees ─────────────────────────────────────────────
+  const [trustees, setTrustees] = useState([]);
+  const [trusteeMsg, setTrusteeMsg] = useState({});
+  const [trusteeUploading, setTrusteeUploading] = useState({});
+
+  useEffect(() => {
+    fetch('/api/trustees').then(r => r.json()).then(setTrustees).catch(() => {});
+  }, []);
+
+  async function handleTrusteePhotoUpload(idx, e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setTrusteeUploading(p => ({ ...p, [idx]: true }));
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await fetch('/api/upload-image', { method: 'POST', body: fd });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.detail || 'Upload failed');
+      await fetch(`/api/admin/trustees/${idx}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
+        body: JSON.stringify({ photo_url: result.url }),
+      });
+      setTrustees(prev => prev.map(t => t.idx === idx ? { ...t, photo_url: result.url } : t));
+      setTrusteeMsg(m => ({ ...m, [idx]: '✅ Photo updated' }));
+    } catch (err) {
+      setTrusteeMsg(m => ({ ...m, [idx]: `❌ ${err.message}` }));
+    } finally {
+      setTrusteeUploading(p => ({ ...p, [idx]: false }));
+    }
+  }
+
+  async function handleTrusteeNameUpdate(idx, name, role) {
+    try {
+      await fetch(`/api/admin/trustees/${idx}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
+        body: JSON.stringify({ name, role }),
+      });
+      setTrusteeMsg(m => ({ ...m, [idx]: '✅ Saved' }));
+    } catch (err) {
+      setTrusteeMsg(m => ({ ...m, [idx]: `❌ ${err.message}` }));
+    }
+  }
+
   // ── Videos ──────────────────────────────────────────────
   const [vidForm, setVidForm] = useState({ title: '', description: '', videoUrl: '', thumbnailUrl: '' });
   const [vidMsg, setVidMsg] = useState('');
@@ -191,7 +339,7 @@ function Admin() {
 
       <section style={{ padding: '0 5% 60px' }}>
         <div style={{ display: 'flex', gap: 8, marginBottom: 32, borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
-          {['activities', 'videos'].map(t => (
+          {['activities', 'programs', 'trustees', 'videos', 'settings'].map(t => (
             <button
               key={t}
               type="button"
@@ -204,7 +352,7 @@ function Admin() {
                 marginBottom: -1,
               }}
             >
-              {t === 'activities' ? 'Activities' : 'Videos'}
+              {t === 'activities' ? 'Activities' : t === 'programs' ? 'Programs' : t === 'trustees' ? 'Trustees' : t === 'settings' ? 'Settings' : 'Videos'}
             </button>
           ))}
         </div>
@@ -301,6 +449,89 @@ function Admin() {
             </div>
           </div>
         )}
+
+        {/* ── PROGRAMS TAB ───────────────────────────── */}
+        {tab === 'programs' && (
+          <div style={{ maxWidth: 720 }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--ink-mid)', marginBottom: 24 }}>
+              Upload a photo for each program pillar. Images appear as card backgrounds on the website.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {programs.map(prog => (
+                <div key={prog.slug} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 18px', border: '1px solid var(--border)', borderRadius: 12, background: 'var(--white)' }}>
+                  <div style={{ width: 56, height: 56, borderRadius: 10, background: `${prog.color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', color: prog.color, flexShrink: 0 }}>
+                    <i className={prog.icon} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: 4 }}>{prog.title}</div>
+                    {prog.image_url
+                      ? <div style={{ fontSize: '0.75rem', color: 'var(--green)', wordBreak: 'break-all' }}>✅ {prog.image_url.split('/').pop()}</div>
+                      : <div style={{ fontSize: '0.75rem', color: 'var(--ink-light)' }}>No image yet</div>
+                    }
+                    {progMsg[prog.slug] && <div style={{ fontSize: '0.75rem', marginTop: 4 }}>{progMsg[prog.slug]}</div>}
+                  </div>
+                  {prog.image_url && (
+                    <img src={prog.image_url} alt="" style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />
+                  )}
+                  <label style={{ flexShrink: 0 }}>
+                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleProgImageUpload(prog.slug, e)} disabled={progUploading[prog.slug]} />
+                    <span style={{ display: 'inline-block', padding: '7px 14px', background: 'var(--saffron)', color: '#fff', borderRadius: 20, fontSize: '0.8rem', fontWeight: 500, cursor: progUploading[prog.slug] ? 'wait' : 'pointer' }}>
+                      {progUploading[prog.slug] ? 'Uploading…' : prog.image_url ? 'Change' : 'Upload'}
+                    </span>
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── TRUSTEES TAB ───────────────────────────── */}
+        {tab === 'trustees' && (
+          <div style={{ maxWidth: 720 }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--ink-mid)', marginBottom: 24 }}>
+              Update trustee names, roles, and upload their photos.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {trustees.map(t => (
+                <div key={t.idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '16px 18px', border: '1px solid var(--border)', borderRadius: 12, background: 'var(--white)' }}>
+                  {t.photo_url
+                    ? <img src={t.photo_url} alt={t.name} style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                    : <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'var(--saffron-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', color: 'var(--saffron)', fontWeight: 700, flexShrink: 0 }}>
+                        {t.name.charAt(0)}
+                      </div>
+                  }
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
+                      <input
+                        defaultValue={t.name}
+                        placeholder="Full name"
+                        style={{ flex: 1, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.85rem' }}
+                        onBlur={e => handleTrusteeNameUpdate(t.idx, e.target.value, t.role)}
+                        id={`trustee-name-${t.idx}`}
+                      />
+                      <input
+                        defaultValue={t.role}
+                        placeholder="Role"
+                        style={{ flex: 1, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.85rem' }}
+                        onBlur={e => handleTrusteeNameUpdate(t.idx, document.getElementById(`trustee-name-${t.idx}`)?.value || t.name, e.target.value)}
+                      />
+                    </div>
+                    {trusteeMsg[t.idx] && <div style={{ fontSize: '0.75rem', marginBottom: 6 }}>{trusteeMsg[t.idx]}</div>}
+                    <label>
+                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleTrusteePhotoUpload(t.idx, e)} disabled={trusteeUploading[t.idx]} />
+                      <span style={{ display: 'inline-block', padding: '5px 12px', background: 'var(--saffron)', color: '#fff', borderRadius: 20, fontSize: '0.78rem', fontWeight: 500, cursor: trusteeUploading[t.idx] ? 'wait' : 'pointer' }}>
+                        {trusteeUploading[t.idx] ? 'Uploading…' : t.photo_url ? 'Change photo' : 'Upload photo'}
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── SETTINGS TAB ───────────────────────────── */}
+        {tab === 'settings' && <SettingsTab token={token} />}
 
         {/* ── VIDEOS TAB ─────────────────────────────── */}
         {tab === 'videos' && (

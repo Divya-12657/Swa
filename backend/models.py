@@ -65,6 +65,25 @@ class Volunteer(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class ProgramImage(SQLModel, table=True):
+    slug: str = Field(primary_key=True)  # matches program slug
+    image_url: str
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class SiteSetting(SQLModel, table=True):
+    key: str = Field(primary_key=True)
+    value: str = ""
+
+
+class TrusteeProfile(SQLModel, table=True):
+    idx: int = Field(primary_key=True)  # 0-5 position
+    name: Optional[str] = None
+    role: Optional[str] = None
+    photo_url: Optional[str] = None
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class Payment(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     donor_id: Optional[str] = Field(default=None, foreign_key="donor.id")

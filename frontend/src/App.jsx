@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Route, Routes, useParams } from 'react-router-dom';
 import Admin from './pages/Admin';
+import CalendarPage from './pages/Calendar';
 
 function Gallery({ activity, onClose }) {
   const images = activity.images?.length
@@ -254,15 +255,34 @@ const defaultTrustees = [
 ];
 
 const defaultDonors = [
-  { name: 'Acme Corporation', contribution: 'Platinum partner', logo_url: '' },
-  { name: 'Example Foundation', contribution: 'CSR program sponsor', logo_url: '' },
-  { name: 'Sunrise Industries', contribution: 'Annual food drive sponsor', logo_url: '' },
+  { name: 'Baker Hughes', contribution: 'Corporate sponsor', logo_url: '' },
+  { name: 'Donatekart', contribution: 'Platform partner', logo_url: '' },
+  { name: 'Global Calcium Pvt Ltd', contribution: 'Corporate sponsor', logo_url: '' },
+  { name: 'Vakil Housing & Development', contribution: 'Development partner', logo_url: '' },
+  { name: 'GCI', contribution: 'Corporate sponsor', logo_url: '' },
+  { name: 'Vidya', contribution: 'Education sponsor', logo_url: '' },
+  { name: 'Maargam', contribution: 'Community partner', logo_url: '' },
+  { name: 'Missing Millions', contribution: 'CSR partner', logo_url: '' },
+  { name: 'MCKS', contribution: 'Community sponsor', logo_url: '' },
+  { name: 'BigBasket', contribution: 'Food distribution', logo_url: '' },
+  { name: 'Fortinet', contribution: 'Technology sponsor', logo_url: '' },
+  { name: 'Prohance', contribution: 'Corporate sponsor', logo_url: '' },
+  { name: 'Sneha Mumbai', contribution: 'NGO partner', logo_url: '' },
+  { name: 'Dwara', contribution: 'Community partner', logo_url: '' },
+  { name: 'Rotary Midatown Charitable Trust', contribution: 'Charitable partner', logo_url: '' },
+  { name: 'Rotary GenNext', contribution: 'Youth partner', logo_url: '' },
+  { name: 'HopeWorks', contribution: 'Social impact partner', logo_url: '' },
+  { name: 'Andulasia Foundation', contribution: 'Foundation partner', logo_url: '' },
+  { name: 'Sapiens Technologies', contribution: 'Technology sponsor', logo_url: '' },
+  { name: 'Automated Workflow Pvt Limited', contribution: 'Technology partner', logo_url: '' },
+  { name: 'Avalon Technologies', contribution: 'Technology sponsor', logo_url: '' },
+  { name: 'Protivity', contribution: 'Corporate sponsor', logo_url: '' },
+  { name: 'Aveva', contribution: 'Technology sponsor', logo_url: '' },
 ];
 
 const defaultTrust = [
   { title: 'Registered trust', value: 'Section 12A registered', doc_url: '' },
-  { title: '80G exemption', value: 'Tax benefit for donors', doc_url: '' },
-  { title: 'FCRA compliant', value: 'International funding ready', doc_url: '' },
+  { title: '80G exemption', value: 'Tax benefit for donors', doc_url: '' }
 ];
 
 function getYoutubeEmbed(url) {
@@ -279,10 +299,35 @@ function getYoutubeEmbed(url) {
   return null;
 }
 
-function Home({ activities, programs, stories, faqs, trust, trustees, donors, videos }) {
+function Home({ activities, programs, stories, faqs, trust, trustees, donors, videos, settings = {} }) {
   const [galleryActivity, setGalleryActivity] = useState(null);
   const [showAllActivities, setShowAllActivities] = useState(false);
   const [expandedCards, setExpandedCards] = useState(new Set());
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calMonth, setCalMonth] = useState(() => { const d = new Date(); d.setDate(1); return d; });
+  const [selectedCalDate, setSelectedCalDate] = useState(null);
+
+  function parseActDate(str) {
+    if (!str) return null;
+    const s = str.toLowerCase().trim();
+    const now = new Date();
+    if (s === 'today') return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (s === 'yesterday') return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    const m = s.match(/(\d+)\s*days?\s*ago/);
+    if (m) return new Date(now.getFullYear(), now.getMonth(), now.getDate() - parseInt(m[1]));
+    const d = new Date(str);
+    return isNaN(d) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  const actDateMap = useMemo(() => {
+    const map = {};
+    activities.forEach(a => {
+      const d = parseActDate(a.date);
+      if (d) { const k = d.toDateString(); map[k] = (map[k] || []).concat(a); }
+    });
+    return map;
+  }, [activities]);
+
   const toggleExpand = (id) => setExpandedCards(prev => {
     const next = new Set(prev);
     next.has(id) ? next.delete(id) : next.add(id);
@@ -455,7 +500,10 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
 
   return (
     <>
-      <section className="hero" id="home">
+      <section className="hero" id="home" style={settings.hero_bg_url ? {
+        backgroundImage: `linear-gradient(rgba(249,247,243,0.72), rgba(249,247,243,0.72)), url(${settings.hero_bg_url})`,
+        backgroundSize: 'cover', backgroundPosition: 'center'
+      } : {}}>
         <div className="hero-content fade-up">
           <a href={OFFICE_MAP_URL} target="_blank" rel="noopener noreferrer" className="hero-eyebrow hero-eyebrow-link">
             <i className="ti ti-map-pin" /> Bengaluru · Serving since 2000
@@ -469,8 +517,19 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
             <br />
             -F. Scott Fitzgerald,
           </h1>
-          <p>
-            Swabhimaan works in the slum neighborhoods of Bengaluru — feeding 500+ people daily, educating children, empowering women through micro-lending, and providing healthcare to those who need it most.
+          <p className="hero-about-text">
+            Swabhimaan is not just an organization; it is a place where every individual is nurtured, supported, and cared for, irrespective of their circumstances or background. It stands firmly on the belief that every person on this planet deserves to be treated with dignity and respect.
+          <p>It is a place that empowers people and helps them realize their potential. With a strong focus on women and children—the very 
+              foundation and building blocks of society—Swabhimaan works tirelessly
+               to create opportunities that lead to lasting change.</p>
+          <p>Over the years, its work has expanded across multiple domains, 
+            and its journey of impact continues to grow. What began with a vision for education gradually expanded to include food support,
+             ration distribution, micro-lending, healthcare initiatives, and even a full-fledged school-like setup. </p>
+          <p>Swabhimaan has also created employment opportunities 
+            through initiatives such as paper making and has established a crèche that enables women to upskill
+             themselves while ensuring their children are cared for in a safe environment. </p>
+          <p>Its mission continues to evolve, touching lives 
+            and building stronger communities every day.</p>
           </p>
           <div className="hero-btns">
             <a href="#donate" className="btn btn-primary">
@@ -485,6 +544,15 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
           </div>
         </div>
         <div className="hero-visual fade-up-2">
+          <div className="hero-img-wrap">
+            {activities[0]?.image_url
+              ? <img src={activities[0].image_url} alt={activities[0].title} />
+              : <div className="hero-img-placeholder">
+                  <i className="ti ti-camera" />
+                  <span>Add a photo</span>
+                </div>
+            }
+          </div>
           <div className="hero-stat-grid">
             <div className="stat-card">
               <div className="num">500+</div>
@@ -504,15 +572,8 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
             </div>
           </div>
           <div className="trust-strip">
-            <div className="trust-item">
-              <i className="ti ti-circle-check" /> Registered charitable trust
-            </div>
-            <div className="trust-item">
-              <i className="ti ti-circle-check" /> 80G tax exemption
-            </div>
-            <div className="trust-item">
-              <i className="ti ti-circle-check" /> FCRA compliant
-            </div>
+            <div className="trust-item"><i className="ti ti-circle-check" /> Registered charitable trust</div>
+            <div className="trust-item"><i className="ti ti-circle-check" /> 80G tax exemption</div>
           </div>
         </div>
       </section>
@@ -521,16 +582,18 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
         <div className="section-header">
           <div>
             <div className="section-label">Live updates</div>
-            <h2 className="section-title">
-              Latest <em>activities</em>
-            </h2>
+            <h2 className="section-title">Latest <em>activities</em></h2>
           </div>
-          {activities.length > 4 && (
-            <button className="see-all" style={{ background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => setShowAllActivities(v => !v)}>
-              {showAllActivities ? 'Show less' : `View all ${activities.length}`} <i className={`ti ti-arrow-${showAllActivities ? 'up' : 'right'}`} />
-            </button>
-          )}
+          <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+            <Link to="/calendar" className="see-all"><i className="ti ti-calendar" /> Calendar</Link>
+            {activities.length > 4 && (
+              <button className="see-all" style={{ background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => setShowAllActivities(v => !v)}>
+                {showAllActivities ? 'Show less' : `View all ${activities.length}`} <i className={`ti ti-arrow-${showAllActivities ? 'up' : 'right'}`} />
+              </button>
+            )}
+          </div>
         </div>
+
         <div className="activity-grid">
           {(showAllActivities ? activities : activities.slice(0, 4)).map((activity) => {
             const imgs = activity.images?.length
@@ -596,7 +659,6 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
               Show less <i className="ti ti-arrow-up" />
             </button>
           </div>
-
         )}
         {galleryActivity && <Gallery activity={galleryActivity} onClose={() => setGalleryActivity(null)} />}
       </section>
@@ -655,21 +717,28 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
         <p className="section-sub">
           Every program is designed to create lasting self-reliance — not dependency. We build skills, connections, and confidence alongside food, health, and education.
         </p>
-        <div className="programs-grid">
-          {programs.map((program) => (
-            <Link key={program.slug} to={`/programs/${program.slug}`} className="prog-card">
-              <div className="prog-thumb" style={{ backgroundColor: program.color }}>
-                {program.image_url
-                  ? <img src={program.image_url} alt={program.title} />
-                  : <i className={program.icon} />}
+        <div className="programs-bento">
+          {programs.map((program, idx) => (
+            <Link
+              key={program.slug}
+              to={`/programs/${program.slug}`}
+              className={`prog-bento-card${idx === 0 ? ' prog-bento-featured' : ''}${idx === programs.length - 1 ? ' prog-bento-banner' : ''}${program.image_url ? ' prog-bento-has-image' : ''}`}
+              style={program.image_url
+                ? { backgroundImage: `linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.6)), url(${program.image_url})`, backgroundSize: 'cover', backgroundPosition: 'center', color: '#fff' }
+                : { background: `${program.color}35` }
+              }
+            >
+              <div className="prog-bento-icon" style={program.image_url
+                ? { background: 'rgba(255,255,255,0.2)', color: '#fff' }
+                : { background: `${program.color}55`, color: program.color }
+              }>
+                <i className={program.icon} />
               </div>
-              <div className="prog-body">
-                <div className="prog-title">{program.title}</div>
-                <div className="prog-stat">
-                  <i className="ti ti-trending-up" /> {program.stat}
-                </div>
-                <div className="prog-desc">{program.description}</div>
-                <div className="prog-link">View program <i className="ti ti-arrow-right" /></div>
+              <div className="prog-bento-body">
+                <div className="prog-bento-title" style={!program.image_url ? { color: program.color } : {}}>{program.title}</div>
+                <div className="prog-bento-stat"><i className="ti ti-trending-up" /> {program.stat}</div>
+                <div className="prog-bento-desc">{program.description}</div>
+                <div className="prog-bento-link">View program <i className="ti ti-arrow-right" /></div>
               </div>
             </Link>
           ))}
@@ -1084,26 +1153,43 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
       </section>
 
       {donors.length > 0 && (
-        <section id="donors">
-          <div className="section-label">Our partners</div>
-          <h2 className="section-title">
-            Major donors &amp; <em>partners</em>
-          </h2>
-          <div className="donors-grid">
-            {donors.map((donor, index) => (
-              <div key={`${donor.name}-${index}`} className="donor-card">
-                {donor.logo_url ? (
-                  <img src={donor.logo_url} alt={donor.name} className="donor-logo" />
-                ) : (
-                  <div className="donor-avatar">{donor.name.charAt(0)}</div>
-                )}
-                <div>
-                  <div className="donor-name">{donor.name}</div>
-                  <div className="donor-since">{donor.contribution}</div>
-                </div>
-              </div>
-            ))}
+        <section id="donors" style={{ paddingBottom: 60 }}>
+          <div className="donors-bottom-text" style={{ marginBottom: 40 }}>
+            <div className="section-label">Our partners</div>
+            <h2 className="section-title">Trusted by organisations <em>that care</em></h2>
+            <p className="section-sub">Our work is powered by forward-thinking companies and foundations who believe in long-term community change.</p>
           </div>
+          {(() => {
+            const COLORS = ['#854F0B','#0F6E56','#185FA5','#6D4AFF','#993556','#3B6D11','#D85A30','#0B6B8C'];
+            const Chip = ({ donor, idx }) => {
+              const bg = COLORS[idx % COLORS.length];
+              return (
+                <div className="sponsor-chip">
+                  {donor.logo_url
+                    ? <img src={donor.logo_url} alt={donor.name} className="sponsor-chip-logo" />
+                    : <div className="sponsor-chip-avatar" style={{ background: bg }}>{donor.name.charAt(0)}</div>
+                  }
+                  <span className="sponsor-chip-name">{donor.name}</span>
+                </div>
+              );
+            };
+            const row1 = donors.slice(0, Math.ceil(donors.length / 2));
+            const row2 = donors.slice(Math.ceil(donors.length / 2));
+            return (
+              <>
+                <div className="ribbon-wrapper">
+                  <div className="ribbon-track">
+                    {[...row1, ...row1].map((d, i) => <Chip key={i} donor={d} idx={i} />)}
+                  </div>
+                </div>
+                <div className="ribbon-wrapper" style={{ marginTop: 12 }}>
+                  <div className="ribbon-track ribbon-track-reverse">
+                    {[...row2, ...row2].map((d, i) => <Chip key={i} donor={d} idx={i + 5} />)}
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </section>
       )}
 
@@ -1113,17 +1199,32 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
         <p>
           Your contributions sustain everyday essentials, education, healthcare, and livelihood programs for low-income families in Bengaluru.
         </p>
-        <div className="donate-amounts">
-          {[1, 2, 3, 4].map((amount) => (
-            <button
-              key={amount}
-              type="button"
-              className={`amt-btn ${donationAmount === amount ? 'selected' : ''}`}
-              onClick={() => setDonationAmount(amount)}
-            >
-              ₹{amount}
-            </button>
-          ))}
+        <div className="donate-amount-hero">
+          <div className="donate-amount-label">I want to donate</div>
+          <div className="donate-amount-display">
+            <span className="donate-currency">₹</span>
+            <input
+              type="number"
+              min="1"
+              placeholder="0"
+              value={donationAmount || ''}
+              onChange={(e) => setDonationAmount(Number(e.target.value))}
+              className="donate-amount-input"
+            />
+          </div>
+          <div className="donate-quick-label">Quick select</div>
+          <div className="donate-amounts">
+            {[500, 1000, 2000, 5000].map((amount) => (
+              <button
+                key={amount}
+                type="button"
+                className={`amt-btn ${donationAmount === amount ? 'selected' : ''}`}
+                onClick={() => setDonationAmount(amount)}
+              >
+                ₹{amount.toLocaleString('en-IN')}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="donate-fields">
           <input
@@ -1222,6 +1323,7 @@ function App() {
   const [trustees, setTrustees] = useState(defaultTrustees);
   const [donors, setDonors] = useState(defaultDonors);
   const [videos, setVideos] = useState([]);
+  const [settings, setSettings] = useState({});
 
   useEffect(() => {
     async function loadContent() {
@@ -1235,8 +1337,9 @@ function App() {
           fetch('/api/trustees'),
           fetch('/api/donors'),
           fetch('/api/videos'),
+          fetch('/api/settings'),
         ]);
-        const [activitiesData, programsData, storiesData, faqsData, trustData, trusteesData, donorsData, videosData] = await Promise.all(
+        const [activitiesData, programsData, storiesData, faqsData, trustData, trusteesData, donorsData, videosData, settingsData] = await Promise.all(
           responses.map((res) => (res.ok ? res.json() : null))
         );
         if (activitiesData) setActivities(activitiesData);
@@ -1247,6 +1350,7 @@ function App() {
         if (trusteesData) setTrustees(trusteesData);
         if (donorsData) setDonors(donorsData);
         if (videosData) setVideos(videosData);
+        if (settingsData) setSettings(settingsData);
       } catch (err) {
         console.warn('Backend fetch failed:', err);
       }
@@ -1315,10 +1419,11 @@ function App() {
       <Routes>
         <Route
           path="/"
-          element={<Home activities={activities} programs={programs} stories={stories} faqs={faqs} trust={trust} trustees={trustees} donors={donors} videos={videos} />}
+          element={<Home activities={activities} programs={programs} stories={stories} faqs={faqs} trust={trust} trustees={trustees} donors={donors} videos={videos} settings={settings} />}
         />
         <Route path="/programs/:slug" element={<ProgramDetail programs={programs} />} />
         <Route path="/Admin" element={<Admin />} />
+        <Route path="/calendar" element={<CalendarPage />} />
       </Routes>
     </div>
   );

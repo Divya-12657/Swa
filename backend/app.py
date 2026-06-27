@@ -20,7 +20,7 @@ import requests
 import razorpay
 
 from db import engine, get_session
-from models import SQLModel, Video, Activity, Payment, FoodRequest, Donor, Volunteer
+from models import SQLModel, Video, Activity, Payment, FoodRequest, Donor, Volunteer, ProgramImage, TrusteeProfile, SiteSetting
 from sqlmodel import Session as SQLSession
 
 AWS_S3_BUCKET = os.getenv("AWS_S3_BUCKET")
@@ -171,14 +171,33 @@ FAQS = [
 
 TRUST = [
     {"title": "Registered trust", "value": "Section 12A registered", "doc_url": ""},
-    {"title": "80G exemption", "value": "Tax benefit for donors", "doc_url": ""},
-    {"title": "FCRA compliant", "value": "International funding ready", "doc_url": ""},
+    {"title": "80G exemption", "value": "Tax benefit for donors", "doc_url": ""}
 ]
 
 MAJOR_DONORS = [
-    {"name": "Acme Corporation", "contribution": "Platinum partner", "logo_url": ""},
-    {"name": "Example Foundation", "contribution": "CSR program sponsor", "logo_url": ""},
-    {"name": "Sunrise Industries", "contribution": "Annual food drive sponsor", "logo_url": ""},
+    {"name": "Baker Hughes",                    "contribution": "Corporate sponsor",    "logo_url": ""},
+    {"name": "Donatekart",                       "contribution": "Platform partner",     "logo_url": ""},
+    {"name": "Global Calcium Pvt Ltd",           "contribution": "Corporate sponsor",    "logo_url": ""},
+    {"name": "Vakil Housing & Development",      "contribution": "Development partner",  "logo_url": ""},
+    {"name": "GCI",                              "contribution": "Corporate sponsor",    "logo_url": ""},
+    {"name": "Vidya",                            "contribution": "Education sponsor",    "logo_url": ""},
+    {"name": "Maargam",                          "contribution": "Community partner",    "logo_url": ""},
+    {"name": "Missing Millions",                 "contribution": "CSR partner",          "logo_url": ""},
+    {"name": "MCKS",                             "contribution": "Community sponsor",    "logo_url": ""},
+    {"name": "BigBasket",                        "contribution": "Food distribution",    "logo_url": ""},
+    {"name": "Fortinet",                         "contribution": "Technology sponsor",   "logo_url": ""},
+    {"name": "Prohance",                         "contribution": "Corporate sponsor",    "logo_url": ""},
+    {"name": "Sneha Mumbai",                     "contribution": "NGO partner",          "logo_url": ""},
+    {"name": "Dwara",                            "contribution": "Community partner",    "logo_url": ""},
+    {"name": "Rotary Midatown Charitable Trust", "contribution": "Charitable partner",   "logo_url": ""},
+    {"name": "Rotary GenNext",                   "contribution": "Youth partner",        "logo_url": ""},
+    {"name": "HopeWorks",                        "contribution": "Social impact partner","logo_url": ""},
+    {"name": "Andulasia Foundation",             "contribution": "Foundation partner",   "logo_url": ""},
+    {"name": "Sapiens Technologies",             "contribution": "Technology sponsor",   "logo_url": ""},
+    {"name": "Automated Workflow Pvt Limited",   "contribution": "Technology partner",   "logo_url": ""},
+    {"name": "Avalon Technologies",              "contribution": "Technology sponsor",   "logo_url": ""},
+    {"name": "Protivity",                        "contribution": "Corporate sponsor",    "logo_url": ""},
+    {"name": "Aveva",                            "contribution": "Technology sponsor",   "logo_url": ""},
 ]
 
 TRUSTEES = [
@@ -339,6 +358,22 @@ def post_image_to_instagram(image_url: str, caption: str) -> Optional[dict]:
         return {"error": str(exc)}
 
 
+@app.get("/api/settings")
+def get_settings(session: SQLSession = Depends(get_session)):
+    return {s.key: s.value for s in session.exec(select(SiteSetting)).all()}
+
+@app.post("/api/admin/settings/{key}")
+def update_setting(key: str, payload: dict, session: SQLSession = Depends(get_session), token: str = Header(alias="X-Admin-Token")):
+    verify_admin_token(token)
+    existing = session.get(SiteSetting, key)
+    if existing:
+        existing.value = payload.get("value", "")
+        session.add(existing)
+    else:
+        session.add(SiteSetting(key=key, value=payload.get("value", "")))
+    session.commit()
+    return {"key": key, "value": payload.get("value", "")}
+
 @app.get("/api/health")
 def health():
     return {"status": "ok", "message": "Swabhimaan API is running."}
@@ -385,8 +420,24 @@ def list_activities(session: SQLSession = Depends(get_session)):
 
 
 @app.get("/api/programs")
-def list_programs():
-    return PROGRAMS
+def list_programs(session: SQLSession = Depends(get_session)):
+    images = {p.slug: p.image_url for p in session.exec(select(ProgramImage)).all()}
+    return [{**p, "image_url": images.get(p["slug"], p.get("image_url", ""))} for p in PROGRAMS]
+
+
+@app.post("/api/admin/programs/{slug}/image")
+def set_program_image(slug: str, payload: dict, session: SQLSession = Depends(get_session), token: str = Header(alias="X-Admin-Token")):
+    verify_admin_token(token)
+    image_url = payload.get("image_url", "")
+    existing = session.get(ProgramImage, slug)
+    if existing:
+        existing.image_url = image_url
+        existing.updated_at = datetime.utcnow()
+        session.add(existing)
+    else:
+        session.add(ProgramImage(slug=slug, image_url=image_url))
+    session.commit()
+    return {"slug": slug, "image_url": image_url}
 
 
 @app.get("/api/stories")
@@ -410,8 +461,39 @@ def list_donors():
 
 
 @app.get("/api/trustees")
-def list_trustees():
-    return TRUSTEES
+def list_trustees(session: SQLSession = Depends(get_session)):
+    profiles = {p.idx: p for p in session.exec(select(TrusteeProfile)).all()}
+    result = []
+    for i, t in enumerate(TRUSTEES):
+        p = profiles.get(i)
+        result.append({
+            "idx": i,
+            "name": (p.name if p and p.name else t["name"]),
+            "role": (p.role if p and p.role else t["role"]),
+            "photo_url": (p.photo_url if p and p.photo_url else t.get("photo_url", "")),
+        })
+    return result
+
+
+class TrusteeUpdate(BaseModel):
+    name: Optional[str] = None
+    role: Optional[str] = None
+    photo_url: Optional[str] = None
+
+@app.post("/api/admin/trustees/{idx}")
+def update_trustee(idx: int, payload: TrusteeUpdate, session: SQLSession = Depends(get_session), token: str = Header(alias="X-Admin-Token")):
+    verify_admin_token(token)
+    existing = session.get(TrusteeProfile, idx)
+    if existing:
+        if payload.name is not None: existing.name = payload.name
+        if payload.role is not None: existing.role = payload.role
+        if payload.photo_url is not None: existing.photo_url = payload.photo_url
+        existing.updated_at = datetime.utcnow()
+        session.add(existing)
+    else:
+        session.add(TrusteeProfile(idx=idx, name=payload.name, role=payload.role, photo_url=payload.photo_url))
+    session.commit()
+    return {"idx": idx}
 
 
 @app.get("/api/videos")
