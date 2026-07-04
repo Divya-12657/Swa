@@ -19,20 +19,26 @@ function Gallery({ activity, onClose }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [images.length, onClose]);
 
+  const desc = activity.description
+    ? activity.description.replace(/<[^>]*>/g, '').trim()
+    : null;
+
   return (
     <div className="gallery-overlay" onClick={onClose}>
       <div className="gallery-modal" onClick={e => e.stopPropagation()}>
         <button className="gallery-close" onClick={onClose}><i className="ti ti-x" /></button>
-        <div className="gallery-img-wrap">
-          <img src={images[idx]} alt="" className="gallery-img" />
-          {images.length > 1 && (
-            <>
-              <button className="gallery-arrow gallery-prev" onClick={() => setIdx(i => (i - 1 + images.length) % images.length)}><i className="ti ti-chevron-left" /></button>
-              <button className="gallery-arrow gallery-next" onClick={() => setIdx(i => (i + 1) % images.length)}><i className="ti ti-chevron-right" /></button>
-              <div className="gallery-counter">{idx + 1} / {images.length}</div>
-            </>
-          )}
-        </div>
+        {images.length > 0 && (
+          <div className="gallery-img-wrap">
+            <img src={images[idx]} alt="" className="gallery-img" />
+            {images.length > 1 && (
+              <>
+                <button className="gallery-arrow gallery-prev" onClick={() => setIdx(i => (i - 1 + images.length) % images.length)}><i className="ti ti-chevron-left" /></button>
+                <button className="gallery-arrow gallery-next" onClick={() => setIdx(i => (i + 1) % images.length)}><i className="ti ti-chevron-right" /></button>
+                <div className="gallery-counter">{idx + 1} / {images.length}</div>
+              </>
+            )}
+          </div>
+        )}
         <div className="gallery-info">
           <span className={`act-badge ${activity.badge}`}>{activity.category}</span>
           <div className="gallery-title">{activity.title}</div>
@@ -41,6 +47,7 @@ function Gallery({ activity, onClose }) {
             {activity.reach && <span><i className="ti ti-users" /> {activity.reach}</span>}
             {activity.date && <span><i className="ti ti-calendar" /> {activity.date}</span>}
           </div>
+          {desc && <div className="gallery-desc">{desc}</div>}
         </div>
       </div>
     </div>
@@ -299,10 +306,8 @@ function getYoutubeEmbed(url) {
   return null;
 }
 
-function Home({ activities, programs, stories, faqs, trust, trustees, donors, videos, settings = {} }) {
+function Home({ activities, programs, stories, faqs, trust, trustees, donors, videos, settings = {}, fdOpen, setFdOpen, volOpen, setVolOpen }) {
   const [galleryActivity, setGalleryActivity] = useState(null);
-  const [showAllActivities, setShowAllActivities] = useState(false);
-  const [expandedCards, setExpandedCards] = useState(new Set());
   const [showCalendar, setShowCalendar] = useState(false);
   const [calMonth, setCalMonth] = useState(() => { const d = new Date(); d.setDate(1); return d; });
   const [selectedCalDate, setSelectedCalDate] = useState(null);
@@ -328,11 +333,6 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
     return map;
   }, [activities]);
 
-  const toggleExpand = (id) => setExpandedCards(prev => {
-    const next = new Set(prev);
-    next.has(id) ? next.delete(id) : next.add(id);
-    return next;
-  });
   const [donationAmount, setDonationAmount] = useState(500);
 
   const impact = useMemo(() => {
@@ -342,7 +342,8 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
     return { meals, tuition, kits };
   }, [donationAmount]);
 
-  const [faqOpen, setFaqOpen] = useState(0);
+  const [faqOpen, setFaqOpen] = useState(-1);
+  const [faqFilter, setFaqFilter] = useState('All');
 
   const kitOptions = [
     { icon: 'ti ti-package', name: 'Grocery kit', price: '~₹800 / family' },
@@ -584,91 +585,66 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
             <div className="section-label">Live updates</div>
             <h2 className="section-title">Latest <em>activities</em></h2>
           </div>
-          <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-            <Link to="/calendar" className="see-all"><i className="ti ti-calendar" /> Calendar</Link>
-            {activities.length > 4 && (
-              <button className="see-all" style={{ background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => setShowAllActivities(v => !v)}>
-                {showAllActivities ? 'Show less' : `View all ${activities.length}`} <i className={`ti ti-arrow-${showAllActivities ? 'up' : 'right'}`} />
-              </button>
-            )}
-          </div>
+          <Link to="/calendar" className="see-all"><i className="ti ti-calendar" /> Calendar</Link>
         </div>
 
-        <div className="activity-grid">
-          {(showAllActivities ? activities : activities.slice(0, 4)).map((activity) => {
-            const imgs = activity.images?.length
-              ? activity.images
-              : activity.image_url ? [activity.image_url] : [];
-            const hasImages = imgs.length > 0;
-            return (
-              <div
-                key={activity.id || activity.title}
-                className={`act-card ${activity.featured ? 'featured' : ''}`}
-              >
-                <div className="act-body">
-                  <span className={`act-badge ${activity.badge}`}>{activity.category}</span>
-                  <div className="act-title-xl">
-                    {activity.title} <i className="ti ti-arrow-right act-title-arrow" />
-                  </div>
-                  <div
-                    className={`act-stack${hasImages ? ' act-stack-clickable' : ''}`}
-                    onClick={() => hasImages && setGalleryActivity(activity)}
-                  >
-                    {hasImages
-                      ? imgs.slice(0, 3).map((url, i) => (
-                          <div key={i} className="act-stack-img" style={{ backgroundImage: `url(${url})` }} />
-                        ))
-                      : <div className={`act-stack-placeholder ${activity.badge || ''}`}>
-                          <i className={activity.icon} style={{ color: activity.color }} />
-                        </div>
-                    }
-                    {hasImages && imgs.length > 1 && (
-                      <div className="act-stack-count"><i className="ti ti-photo" /> {imgs.length}</div>
-                    )}
-                  </div>
-                  <div className="act-pills">
-                    {activity.date && <span><i className="ti ti-calendar" /> {activity.date}</span>}
-                    {activity.location && <span><i className="ti ti-map-pin" /> {activity.location}</span>}
-                  </div>
-                  {(activity.description || activity.reach) && (() => {
-                    const key = (activity.id || activity.title) + '-desc';
-                    const isExpanded = expandedCards.has(key);
-                    const fullText = activity.description
-                      ? activity.description.replace(/<[^>]*>/g, '').trim()
-                      : activity.reach;
-                    const isLong = fullText.length > 120;
-                    return (
-                      <div className="act-card-desc act-card-desc-text">
-                        {isExpanded || !isLong ? fullText : fullText.substring(0, 120) + '…'}
-                        {isLong && (
-                          <button className="read-more-btn" type="button" onClick={() => toggleExpand(key)}>
-                            {isExpanded ? ' Show less' : ' Read more'}
-                          </button>
-                        )}
+        <div className="ribbon-wrapper">
+          <div className="ribbon-track act-ribbon-track">
+            {[...activities, ...activities].map((activity, i) => {
+              const imgs = activity.images?.length
+                ? activity.images
+                : activity.image_url ? [activity.image_url] : [];
+              const hasImages = imgs.length > 0;
+              return (
+                <div
+                  key={i}
+                  className="act-ribbon-card"
+                  onClick={() => setGalleryActivity(activity)}
+                >
+                  {hasImages
+                    ? <img src={imgs[0]} alt={activity.title} className="act-ribbon-img" />
+                    : <div className={`act-ribbon-placeholder ${activity.badge || ''}`}>
+                        <i className={activity.icon} style={{ color: activity.color }} />
                       </div>
-                    );
-                  })()}
+                  }
+                  <div className="act-ribbon-body">
+                    <span className={`act-badge ${activity.badge}`}>{activity.category}</span>
+                    <div className="act-ribbon-title">{activity.title}</div>
+                    {(activity.description || activity.reach) && (() => {
+                      const text = activity.description
+                        ? activity.description.replace(/<[^>]*>/g, '').trim()
+                        : activity.reach;
+                      const isLong = text.length > 160;
+                      return (
+                        <div className="act-ribbon-desc-wrap">
+                          <div className="act-ribbon-desc">{text}</div>
+                          {isLong && (
+                            <button className="act-ribbon-readmore" onClick={e => { e.stopPropagation(); setGalleryActivity(activity); }}>
+                              Read more <i className="ti ti-arrow-right" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
+                    <div className="act-ribbon-date">
+                      {activity.date && <><i className="ti ti-calendar" /> {activity.date}</>}
+                      {activity.location && <><i className="ti ti-map-pin" /> {activity.location}</>}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-        {showAllActivities && (
-          <div style={{ textAlign: 'center', marginTop: 24 }}>
-            <button className="see-all" style={{ background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => setShowAllActivities(false)}>
-              Show less <i className="ti ti-arrow-up" />
-            </button>
+              );
+            })}
           </div>
-        )}
+        </div>
         {galleryActivity && <Gallery activity={galleryActivity} onClose={() => setGalleryActivity(null)} />}
       </section>
 
       <section id="impact">
         <div className="section-label">Your impact</div>
-        <h2 className="section-title" style={{ color: '#fff', marginBottom: '10px' }}>
+        <h2 className="section-title">
           See what your <em style={{ color: '#FAC775' }}>donation</em> does
         </h2>
-        <p className="section-sub" style={{ marginBottom: '36px', color: 'rgba(255,255,255,0.6)' }}>
+        <p className="section-sub">
           Drag the slider to see exactly what your contribution provides to families in Bengaluru.
         </p>
         <div className="calc-wrap">
@@ -750,42 +726,39 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
         <h2 className="section-title">
           Join the movement <em>with purpose</em>
         </h2>
-        <p className="section-sub">
-          You can contribute as a donor, volunteer, or campaign partner. Every action supports our shared mission of dignity and stability.
-        </p>
         <div className="help-grid">
           <a href="#donate" className="help-card featured">
-            <div className="hc-icon">
-              <i className="ti ti-heart" />
+            <div className="hc-icon"><i className="ti ti-heart" /></div>
+            <div className="hc-body">
+              <div className="hc-title">Donate</div>
+              <div className="hc-desc">Make a one-time or recurring contribution to keep programs running.</div>
+              <div className="hc-cta">Support a program <i className="ti ti-arrow-right" /></div>
             </div>
-            <div className="hc-title">Donate</div>
-            <div className="hc-desc">Make a one-time or recurring contribution to keep programs running.</div>
-            <div className="hc-cta">Support a program <i className="ti ti-arrow-right" /></div>
           </a>
-          <a href="#food-delivery" className="help-card">
-            <div className="hc-icon">
-              <i className="ti ti-basket" />
+          <a href="#food-delivery" className="help-card" onClick={() => setFdOpen(true)}>
+            <div className="hc-icon"><i className="ti ti-basket" /></div>
+            <div className="hc-body">
+              <div className="hc-title">Send food</div>
+              <div className="hc-desc">Donate grocery kits or coordinate delivery in local neighborhoods.</div>
+              <div className="hc-cta">Send a kit <i className="ti ti-arrow-right" /></div>
             </div>
-            <div className="hc-title">Send food</div>
-            <div className="hc-desc">Donate grocery kits or coordinate delivery in local neighborhoods.</div>
-            <div className="hc-cta">Send a kit <i className="ti ti-arrow-right" /></div>
           </a>
-          <a href="#volunteer" className="help-card">
-            <div className="hc-icon">
-              <i className="ti ti-users" />
+          <a href="#volunteer" className="help-card" onClick={() => setVolOpen(true)}>
+            <div className="hc-icon"><i className="ti ti-users" /></div>
+            <div className="hc-body">
+              <div className="hc-title">Volunteer</div>
+              <div className="hc-desc">Join our teams for distribution, teaching, and awareness programs.</div>
+              <div className="hc-cta">Volunteer now <i className="ti ti-arrow-right" /></div>
             </div>
-            <div className="hc-title">Volunteer</div>
-            <div className="hc-desc">Join our teams for distribution, teaching, and awareness programs.</div>
-            <div className="hc-cta">Volunteer now <i className="ti ti-arrow-right" /></div>
           </a>
         </div>
       </section>
 
-      <section id="food-delivery">
-        <div className="section-label">Send food</div>
-        <h2 className="section-title">Food delivery — <em>confirmed via WhatsApp</em></h2>
-        <p className="section-sub">Fill the form below. We confirm within 2 hours via WhatsApp, coordinate delivery, and send you photos once families receive their food.</p>
-        <div className="delivery-layout">
+      <section id="food-delivery" style={fdOpen ? {} : { padding: '0 5%' }}>
+        {fdOpen && <div className="delivery-layout">
+          <button className="form-collapse-btn" onClick={() => setFdOpen(false)}>
+            <i className="ti ti-x" /> Close
+          </button>
           <div className="form-panel">
             {fdSubmitted ? (
               <div className="form-success">
@@ -898,91 +871,127 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
               </div>
             </div>
           </div>
-        </div>
+        </div>}
       </section>
 
-      <section id="volunteer">
-        <div className="section-label">Volunteer</div>
-        <h2 className="section-title">Join the team — <em>confirmed via WhatsApp</em></h2>
-        <p className="section-sub">Tell us how you'd like to help. We'll add you to the right WhatsApp group and follow up within 2 hours.</p>
-        <div className="form-panel volunteer-panel">
-          {volSubmitted ? (
-            <div className="form-success">
-              <div className="form-success-icon"><i className="ti ti-circle-check" /></div>
-              <h3>You're in!</h3>
-              <p>We've opened WhatsApp with your details. Send the message and we'll add you to the right group and follow up within 2 hours.</p>
-              <button className="btn btn-ghost" type="button" onClick={() => setVolSubmitted(false)}>
-                <i className="ti ti-edit" /> Submit another response
-              </button>
-            </div>
-          ) : (
-            <>
-          <div className="field-row">
-            <div className="field-group">
-              <label className="field-label">Your name</label>
-              <input type="text" placeholder="Full name" value={volName} onChange={(e) => setVolName(e.target.value)} />
-            </div>
-            <div className="field-group">
-              <label className="field-label">WhatsApp number</label>
-              <input type="tel" placeholder="+91 98765 43210" value={volPhone} onChange={(e) => setVolPhone(e.target.value)} />
-            </div>
-          </div>
-          <div className="field-group">
-            <label className="field-label">How would you like to help?</label>
-            <div className="purpose-grid">
-              <div
-                className={`purpose-card ${volPurpose === 'services' ? 'selected' : ''}`}
-                onClick={() => setVolPurpose('services')}
-              >
-                <i className="ti ti-users-group" />
-                <div className="kit-name">On-ground services</div>
-                <div className="kit-price">Time, skills, presence</div>
-              </div>
-              <div
-                className={`purpose-card ${volPurpose === 'donation' ? 'selected' : ''}`}
-                onClick={() => setVolPurpose('donation')}
-              >
-                <i className="ti ti-gift" />
-                <div className="kit-name">Donation support</div>
-                <div className="kit-price">Funds, goods, sponsorship</div>
-              </div>
-            </div>
-          </div>
-          {volPurpose === 'services' && (
-            <div className="field-row">
-              <div className="field-group">
-                <label className="field-label">Area of interest</label>
-                <select value={volInterest} onChange={(e) => setVolInterest(e.target.value)}>
-                  {interestAreas.map((area) => (
-                    <option key={area}>{area}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="field-group">
-                <label className="field-label">Availability</label>
-                <select value={volAvailability} onChange={(e) => setVolAvailability(e.target.value)}>
-                  <option>Weekdays</option>
-                  <option>Weekends</option>
-                  <option>Flexible / anytime</option>
-                </select>
-              </div>
-            </div>
-          )}
-          <div className="field-group">
-            <label className="field-label">Anything else we should know?</label>
-            <textarea placeholder="Skills, preferred areas, what you'd like to contribute..." value={volNotes} onChange={(e) => setVolNotes(e.target.value)} />
-          </div>
-          <button className="wa-btn" type="button" onClick={handleVolunteer}>
-            <i className="ti ti-brand-whatsapp" /> Submit &amp; join via WhatsApp
+      <section id="volunteer" style={volOpen ? {} : { padding: '0 5%' }}>
+        {volOpen && <div className="delivery-layout">
+          <button className="form-collapse-btn" onClick={() => setVolOpen(false)}>
+            <i className="ti ti-x" /> Close
           </button>
-          <div className="info-note">
-            <i className="ti ti-info-circle" /> We'll add you to our volunteer WhatsApp group and confirm next steps within 2 hours.
+          <div className="form-panel">
+            {volSubmitted ? (
+              <div className="form-success">
+                <div className="form-success-icon"><i className="ti ti-circle-check" /></div>
+                <h3>You're in!</h3>
+                <p>We've opened WhatsApp with your details. Send the message and we'll add you to the right group and follow up within 2 hours.</p>
+                <button className="btn btn-ghost" type="button" onClick={() => setVolSubmitted(false)}>
+                  <i className="ti ti-edit" /> Submit another response
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="step-indicator">
+                  <div className="step-item active"><div className="step-dot">1</div><span>Sign up</span></div>
+                  <div className="step-line" />
+                  <div className="step-item"><div className="step-dot">2</div><span>WA confirm</span></div>
+                  <div className="step-line" />
+                  <div className="step-item"><div className="step-dot">3</div><span>Join team</span></div>
+                </div>
+                <div className="field-row">
+                  <div className="field-group">
+                    <label className="field-label">Your name</label>
+                    <input type="text" placeholder="Full name" value={volName} onChange={(e) => setVolName(e.target.value)} />
+                  </div>
+                  <div className="field-group">
+                    <label className="field-label">WhatsApp number</label>
+                    <input type="tel" placeholder="+91 98765 43210" value={volPhone} onChange={(e) => setVolPhone(e.target.value)} />
+                  </div>
+                </div>
+                <div className="field-group">
+                  <label className="field-label">How would you like to help?</label>
+                  <div className="purpose-grid">
+                    <div className={`purpose-card ${volPurpose === 'services' ? 'selected' : ''}`} onClick={() => setVolPurpose('services')}>
+                      <i className="ti ti-users-group" />
+                      <div className="kit-name">On-ground services</div>
+                      <div className="kit-price">Time, skills, presence</div>
+                    </div>
+                    <div className={`purpose-card ${volPurpose === 'donation' ? 'selected' : ''}`} onClick={() => setVolPurpose('donation')}>
+                      <i className="ti ti-gift" />
+                      <div className="kit-name">Donation support</div>
+                      <div className="kit-price">Funds, goods, sponsorship</div>
+                    </div>
+                  </div>
+                </div>
+                {volPurpose === 'services' && (
+                  <div className="field-row">
+                    <div className="field-group">
+                      <label className="field-label">Area of interest</label>
+                      <select value={volInterest} onChange={(e) => setVolInterest(e.target.value)}>
+                        {interestAreas.map((area) => <option key={area}>{area}</option>)}
+                      </select>
+                    </div>
+                    <div className="field-group">
+                      <label className="field-label">Availability</label>
+                      <select value={volAvailability} onChange={(e) => setVolAvailability(e.target.value)}>
+                        <option>Weekdays</option>
+                        <option>Weekends</option>
+                        <option>Flexible / anytime</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+                <div className="field-group">
+                  <label className="field-label">Anything else we should know?</label>
+                  <textarea placeholder="Skills, preferred areas, what you'd like to contribute..." value={volNotes} onChange={(e) => setVolNotes(e.target.value)} />
+                </div>
+                <button className="wa-btn" type="button" onClick={handleVolunteer}>
+                  <i className="ti ti-brand-whatsapp" /> Submit &amp; join via WhatsApp
+                </button>
+                <div className="info-note">
+                  <i className="ti ti-info-circle" /> We'll add you to our volunteer WhatsApp group and confirm next steps within 2 hours.
+                </div>
+              </>
+            )}
           </div>
-            </>
-          )}
-        </div>
+          <div className="wa-preview-panel">
+            <div className="preview-label">
+              <i className="ti ti-brand-whatsapp" style={{ color: '#25D366' }} /> WhatsApp conversation preview
+            </div>
+            <div className="wa-phone">
+              <div className="wa-top-bar">
+                <div className="wa-avatar">SW</div>
+                <div>
+                  <div className="wa-contact-name">Swabhimaan</div>
+                  <div className="wa-contact-status">Online</div>
+                </div>
+              </div>
+              <div className="wa-messages">
+                <div className="wa-bubble">
+                  Hi{volName ? ` ${volName}` : ''}! Thanks for signing up to volunteer with Swabhimaan.
+                  {volPurpose === 'services'
+                    ? <> You've chosen <strong>on-ground services</strong>{volInterest ? ` in ${volInterest}` : ''}.</>
+                    : <> You've chosen <strong>donation support</strong>.</>}
+                  {' '}We'll add you to the right WhatsApp group shortly.
+                  <div className="wa-time">Just now ✓✓</div>
+                </div>
+                <div className="wa-bubble out">
+                  Looking forward to contributing! 🙏
+                  <div className="wa-time">Just now ✓✓</div>
+                </div>
+                <div className="wa-bubble">
+                  Welcome to the team! ✅ Check your groups — you'll get your first task soon.
+                  <div className="wa-time">Just now ✓✓</div>
+                </div>
+              </div>
+              <div className="wa-input-bar">
+                <div className="wa-input-fake">Type a message</div>
+                <div className="wa-send"><i className="ti ti-send" /></div>
+              </div>
+            </div>
+          </div>
+        </div>}
       </section>
-
 
       <section id="stories">
         <div className="section-label">Impact stories</div>
@@ -1056,42 +1065,34 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
             </h2>
           </div>
         </div>
-        <div className="faq-layout">
-          <div className="faq-filters">
-            <div className="faq-filter-title">Jump to</div>
-            <div className="faq-filter-list">
-              {['Donation', 'Volunteer', 'Trust'].map((tag) => {
-                const index = faqs.findIndex((f) => f.tag === tag);
-                return (
-                  <button
-                    key={tag}
-                    className={`faq-filter-btn ${faqOpen === index ? 'active' : ''}`}
-                    onClick={() => setFaqOpen(index)}
-                  >
-                    <i className="ti ti-circle" /> {tag}
-                  </button>
-                );
-              })}
+        <div className="faq-tag-bar">
+          {['All', 'Donation', 'Volunteer', 'Trust'].map((tag) => (
+            <button
+              key={tag}
+              className={`faq-tag-pill ${faqFilter === tag ? 'active' : ''}`}
+              onClick={() => setFaqFilter(tag)}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+        <div className="faq-list">
+          {faqs.filter(f => faqFilter === 'All' || f.tag === faqFilter).map((faq, index) => (
+            <div key={faq.question} className="faq-item">
+              <button
+                type="button"
+                className={`faq-q ${faqOpen === index ? 'open' : ''}`}
+                onClick={() => setFaqOpen(index === faqOpen ? -1 : index)}
+              >
+                <div>
+                  <span className={`faq-tag faq-tag-${faq.tag.toLowerCase()}`}>{faq.tag}</span>
+                  {faq.question}
+                </div>
+                <i className="ti ti-chevron-down" />
+              </button>
+              <div className={`faq-a ${faqOpen === index ? 'open' : ''}`}>{faq.answer}</div>
             </div>
-          </div>
-          <div className="faq-list">
-            {faqs.map((faq, index) => (
-              <div key={faq.question} className="faq-item">
-                <button
-                  type="button"
-                  className={`faq-q ${faqOpen === index ? 'open' : ''}`}
-                  onClick={() => setFaqOpen(index === faqOpen ? -1 : index)}
-                >
-                  <div>
-                    <span className={`faq-tag faq-tag-${faq.tag.toLowerCase()}`}>{faq.tag}</span>
-                    {faq.question}
-                  </div>
-                  <i className="ti ti-chevron-down" />
-                </button>
-                <div className={`faq-a ${faqOpen === index ? 'open' : ''}`}>{faq.answer}</div>
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
       </section>
 
@@ -1101,7 +1102,7 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
             <div>
               <div className="section-label">About us</div>
               <h2 className="section-title">
-                Meet our <em>trustees</em>
+                Meet our <em>pillars</em>
               </h2>
             </div>
           </div>
@@ -1153,8 +1154,8 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
       </section>
 
       {donors.length > 0 && (
-        <section id="donors" style={{ paddingBottom: 60 }}>
-          <div className="donors-bottom-text" style={{ marginBottom: 40 }}>
+        <section id="donors">
+          <div className="donors-bottom-text">
             <div className="section-label">Our partners</div>
             <h2 className="section-title">Trusted by organisations <em>that care</em></h2>
             <p className="section-sub">Our work is powered by forward-thinking companies and foundations who believe in long-term community change.</p>
@@ -1268,7 +1269,7 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
             <div className="footer-tagline">Serving Bengaluru's underprivileged neighborhoods with dignity, trust, and long-term care.</div>
             <div className="footer-social">
               <button className="social-btn"><i className="ti ti-brand-facebook" /></button>
-              <button className="social-btn"><i className="ti ti-brand-instagram" /></button>
+              <a className="social-btn" href="https://www.instagram.com/swabhimaan.charitabletrust?igsh=ZWx5Zm84bjd4N3Ax" target="_blank" rel="noopener noreferrer"><i className="ti ti-brand-instagram" /></a>
               <button className="social-btn"><i className="ti ti-brand-youtube" /></button>
             </div>
           </div>
@@ -1314,6 +1315,8 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
 
 function App() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [fdOpen, setFdOpen] = useState(false);
+  const [volOpen, setVolOpen] = useState(false);
   const closeMenu = () => setMenuOpen(false);
   const [activities, setActivities] = useState(defaultActivities);
   const [programs, setPrograms] = useState(defaultPrograms);
@@ -1370,8 +1373,8 @@ function App() {
           <li><a href="#activities">Activities</a></li>
           <li><a href="#programs">Programs</a></li>
           <li><a href="#help">How to help</a></li>
-          <li><a href="#food-delivery">Send food</a></li>
-          <li><a href="#volunteer">Volunteer</a></li>
+          <li><a href="#food-delivery" onClick={() => setFdOpen(true)}>Send food</a></li>
+          <li><a href="#volunteer" onClick={() => setVolOpen(true)}>Volunteer</a></li>
           <li><a href="#donate">Donate</a></li>
           <li><a href="#stories">Stories</a></li>
           <li><a href="#videos">Videos</a></li>
@@ -1380,7 +1383,7 @@ function App() {
           <li><a href="#donors">Donors</a></li>
         </ul>
         <div className="nav-actions">
-          <a href="#volunteer" className="btn btn-ghost">
+          <a href="#volunteer" className="btn btn-ghost" onClick={() => setVolOpen(true)}>
             <i className="ti ti-users" /> Volunteer
           </a>
           <a href="#donate" className="btn btn-primary">
@@ -1398,8 +1401,8 @@ function App() {
             <li><a href="#activities" onClick={closeMenu}>Activities</a></li>
             <li><a href="#programs" onClick={closeMenu}>Programs</a></li>
             <li><a href="#help" onClick={closeMenu}>How to help</a></li>
-            <li><a href="#food-delivery" onClick={closeMenu}>Send food</a></li>
-            <li><a href="#volunteer" onClick={closeMenu}>Volunteer</a></li>
+            <li><a href="#food-delivery" onClick={() => { setFdOpen(true); closeMenu(); }}>Send food</a></li>
+            <li><a href="#volunteer" onClick={() => { setVolOpen(true); closeMenu(); }}>Volunteer</a></li>
             <li><a href="#stories" onClick={closeMenu}>Stories</a></li>
             <li><a href="#videos" onClick={closeMenu}>Videos</a></li>
             <li><a href="#faq" onClick={closeMenu}>FAQ</a></li>
@@ -1410,7 +1413,7 @@ function App() {
             <a href="#donate" className="btn btn-primary" style={{ justifyContent: 'center' }} onClick={closeMenu}>
               <i className="ti ti-heart" /> Donate now
             </a>
-            <a href="#volunteer" className="btn btn-ghost" style={{ justifyContent: 'center' }} onClick={closeMenu}>
+            <a href="#volunteer" className="btn btn-ghost" style={{ justifyContent: 'center' }} onClick={() => { setVolOpen(true); closeMenu(); }}>
               <i className="ti ti-users" /> Volunteer
             </a>
           </div>
@@ -1419,7 +1422,7 @@ function App() {
       <Routes>
         <Route
           path="/"
-          element={<Home activities={activities} programs={programs} stories={stories} faqs={faqs} trust={trust} trustees={trustees} donors={donors} videos={videos} settings={settings} />}
+          element={<Home activities={activities} programs={programs} stories={stories} faqs={faqs} trust={trust} trustees={trustees} donors={donors} videos={videos} settings={settings} fdOpen={fdOpen} setFdOpen={setFdOpen} volOpen={volOpen} setVolOpen={setVolOpen} />}
         />
         <Route path="/programs/:slug" element={<ProgramDetail programs={programs} />} />
         <Route path="/Admin" element={<Admin />} />
