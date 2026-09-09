@@ -799,7 +799,18 @@ input[type=range]::-webkit-slider-thumb {
   .trustees-grid { grid-template-columns: repeat(3, 1fr); }
 }
 @media (max-width: 600px) {
-  .trustees-grid { grid-template-columns: repeat(2, 1fr); }
+  .trustees-grid { grid-template-columns: 1fr; gap: 14px; }
+  .trustee-card { flex-direction: row; align-items: flex-start; }
+  .trustee-photo-wrap { flex-shrink: 0; width: 90px; }
+  .trustee-photo,
+  .trustee-photo-placeholder { height: 90px; width: 90px; }
+  .trustee-info { border-top: none; border-left: 3px solid var(--saffron); padding: 10px 14px; }
+  .trustee-bio {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
 }
 
 /* ── DONORS ─────────────────────────────────────────── */
