@@ -20,7 +20,7 @@ import requests
 import razorpay
 
 from db import engine, get_session
-from models import SQLModel, Video, Activity, Payment, FoodRequest, Donor, Volunteer, ProgramImage, TrusteeProfile, SiteSetting
+from models import SQLModel, Video, Activity, Payment, FoodRequest, Donor, Volunteer, ProgramImage, HighlightImage, TrusteeProfile, SiteSetting
 from sqlmodel import Session as SQLSession
 
 AWS_S3_BUCKET = os.getenv("AWS_S3_BUCKET")
@@ -422,7 +422,51 @@ def list_activities(session: SQLSession = Depends(get_session)):
 @app.get("/api/programs")
 def list_programs(session: SQLSession = Depends(get_session)):
     images = {p.slug: p.image_url for p in session.exec(select(ProgramImage)).all()}
-    return [{**p, "image_url": images.get(p["slug"], p.get("image_url", ""))} for p in PROGRAMS]
+    # Build highlight images map: {slug: {h_idx: {img_idx: url}}}
+    hi_rows = session.exec(select(HighlightImage)).all()
+    hi_map: dict = {}
+    for hi in hi_rows:
+        hi_map.setdefault(hi.program_slug, {}).setdefault(hi.highlight_idx, {})[hi.image_idx] = hi.image_url
+    result = []
+    for p in PROGRAMS:
+        slug = p["slug"]
+        slug_hi = hi_map.get(slug, {})
+        highlight_images = {}
+        for h_idx, imgs in slug_hi.items():
+            urls = [imgs.get(0, ""), imgs.get(1, ""), imgs.get(2, "")]
+            if any(urls):
+                highlight_images[str(h_idx)] = urls
+        result.append({**p, "image_url": images.get(slug, p.get("image_url", "")), "highlight_images": highlight_images})
+    return result
+
+
+class HighlightImagePayload(BaseModel):
+    image_url: str
+
+
+@app.post("/api/admin/programs/{slug}/highlights/{h_idx}/{img_idx}")
+def set_highlight_image(
+    slug: str, h_idx: int, img_idx: int,
+    payload: HighlightImagePayload,
+    session: SQLSession = Depends(get_session),
+    token: str = Header(alias="X-Admin-Token"),
+):
+    verify_admin_token(token)
+    existing = session.exec(
+        select(HighlightImage).where(
+            HighlightImage.program_slug == slug,
+            HighlightImage.highlight_idx == h_idx,
+            HighlightImage.image_idx == img_idx,
+        )
+    ).first()
+    if existing:
+        existing.image_url = payload.image_url
+        existing.updated_at = datetime.utcnow()
+        session.add(existing)
+    else:
+        session.add(HighlightImage(program_slug=slug, highlight_idx=h_idx, image_idx=img_idx, image_url=payload.image_url))
+    session.commit()
+    return {"ok": True}
 
 
 @app.post("/api/admin/programs/{slug}/image")
@@ -462,23 +506,32 @@ def list_donors():
 
 @app.get("/api/trustees")
 def list_trustees(session: SQLSession = Depends(get_session)):
-    profiles = {p.idx: p for p in session.exec(select(TrusteeProfile)).all()}
-    result = []
-    for i, t in enumerate(TRUSTEES):
-        p = profiles.get(i)
-        result.append({
-            "idx": i,
-            "name": (p.name if p and p.name else t["name"]),
-            "role": (p.role if p and p.role else t["role"]),
-            "photo_url": (p.photo_url if p and p.photo_url else t.get("photo_url", "")),
-        })
-    return result
+    profiles = session.exec(select(TrusteeProfile).order_by(TrusteeProfile.idx)).all()
+    if not profiles:
+        for i, t in enumerate(TRUSTEES):
+            session.add(TrusteeProfile(idx=i, name=t["name"], role=t["role"], photo_url=t.get("photo_url", "")))
+        session.commit()
+        profiles = session.exec(select(TrusteeProfile).order_by(TrusteeProfile.idx)).all()
+    return [{"idx": p.idx, "name": p.name or "", "role": p.role or "", "bio": p.bio or "", "photo_url": p.photo_url or ""} for p in profiles]
 
 
 class TrusteeUpdate(BaseModel):
     name: Optional[str] = None
     role: Optional[str] = None
+    bio: Optional[str] = None
     photo_url: Optional[str] = None
+
+
+@app.post("/api/admin/trustees", status_code=201)
+def add_trustee(payload: TrusteeUpdate, session: SQLSession = Depends(get_session), token: str = Header(alias="X-Admin-Token")):
+    verify_admin_token(token)
+    all_profiles = session.exec(select(TrusteeProfile)).all()
+    next_idx = max((p.idx for p in all_profiles), default=-1) + 1
+    new_p = TrusteeProfile(idx=next_idx, name=payload.name or "New Trustee", role=payload.role or "Trustee", bio=payload.bio or "", photo_url=payload.photo_url or "")
+    session.add(new_p)
+    session.commit()
+    return {"idx": new_p.idx, "name": new_p.name, "role": new_p.role, "bio": new_p.bio, "photo_url": new_p.photo_url}
+
 
 @app.post("/api/admin/trustees/{idx}")
 def update_trustee(idx: int, payload: TrusteeUpdate, session: SQLSession = Depends(get_session), token: str = Header(alias="X-Admin-Token")):
@@ -487,13 +540,25 @@ def update_trustee(idx: int, payload: TrusteeUpdate, session: SQLSession = Depen
     if existing:
         if payload.name is not None: existing.name = payload.name
         if payload.role is not None: existing.role = payload.role
+        if payload.bio is not None: existing.bio = payload.bio
         if payload.photo_url is not None: existing.photo_url = payload.photo_url
         existing.updated_at = datetime.utcnow()
         session.add(existing)
     else:
-        session.add(TrusteeProfile(idx=idx, name=payload.name, role=payload.role, photo_url=payload.photo_url))
+        session.add(TrusteeProfile(idx=idx, name=payload.name, role=payload.role, bio=payload.bio, photo_url=payload.photo_url))
     session.commit()
     return {"idx": idx}
+
+
+@app.delete("/api/admin/trustees/{idx}")
+def delete_trustee(idx: int, session: SQLSession = Depends(get_session), token: str = Header(alias="X-Admin-Token")):
+    verify_admin_token(token)
+    existing = session.get(TrusteeProfile, idx)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Trustee not found")
+    session.delete(existing)
+    session.commit()
+    return {"ok": True}
 
 
 @app.get("/api/videos")

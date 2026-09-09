@@ -71,6 +71,15 @@ class ProgramImage(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class HighlightImage(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    program_slug: str = Field(index=True)
+    highlight_idx: int   # which highlight card (0-4)
+    image_idx: int       # which collage slot (0, 1, 2)
+    image_url: str = ""
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class SiteSetting(SQLModel, table=True):
     key: str = Field(primary_key=True)
     value: str = ""
@@ -80,6 +89,7 @@ class TrusteeProfile(SQLModel, table=True):
     idx: int = Field(primary_key=True)  # 0-5 position
     name: Optional[str] = None
     role: Optional[str] = None
+    bio: Optional[str] = None
     photo_url: Optional[str] = None
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

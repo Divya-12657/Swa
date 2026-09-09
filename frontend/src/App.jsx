@@ -1,7 +1,20 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, Route, Routes, useParams } from 'react-router-dom';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, Route, Routes, useParams, useLocation } from 'react-router-dom';
 import Admin from './pages/Admin';
 import CalendarPage from './pages/Calendar';
+
+function ScrollToHash() {
+  const { hash, pathname } = useLocation();
+  useEffect(() => {
+    if (!hash) { window.scrollTo({ top: 0 }); return; }
+    const timer = setTimeout(() => {
+      const el = document.querySelector(hash);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [hash, pathname]);
+  return null;
+}
 
 function Gallery({ activity, onClose }) {
   const images = activity.images?.length
@@ -57,38 +70,121 @@ function Gallery({ activity, onClose }) {
 function ProgramDetail({ programs }) {
   const { slug } = useParams();
   const program = programs.find((p) => p.slug === slug);
+  const [activeIdx, setActiveIdx] = useState(0);
 
   if (!program) {
     return (
-      <div className="program-detail-page">
-        <div className="program-detail-content">
-          <Link to="/#programs" className="back-link"><i className="ti ti-arrow-left" /> Back to programs</Link>
-          <h1 className="program-detail-title">Program not found</h1>
-        </div>
+      <div className="pdp-wrap">
+        <Link to="/#programs" className="back-link"><i className="ti ti-arrow-left" /> Back to programs</Link>
+        <h1>Program not found</h1>
       </div>
     );
   }
 
+  const activeH = program.highlights?.[activeIdx];
+  const collageImgs = activeH?.images || [];
+
   return (
-    <div className="program-detail-page">
-      <div className="program-detail-hero" style={{ backgroundColor: program.color }}>
-        {program.image_url
-          ? <img src={program.image_url} alt={program.title} />
-          : <i className={program.icon} />}
+    <div className="pdp-wrap">
+      {/* ── HERO ── */}
+      <div className="pdp-hero" style={
+        program.image_url
+          ? { backgroundImage: `linear-gradient(rgba(0,0,0,0.52), rgba(0,0,0,0.62)), url(${program.image_url})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+          : { background: `linear-gradient(135deg, ${program.color}cc, ${program.color}88)` }
+      }>
+        <div className="pdp-hero-body">
+          <div className="pdp-eyebrow"><i className={program.icon} /> {program.title}</div>
+          <h1 className="pdp-hero-title">{program.description}</h1>
+          <div className="pdp-hero-stat"><i className="ti ti-trending-up" /> {program.stat}</div>
+          <div className="pdp-hero-actions">
+            <Link to="/#donate" className="btn btn-primary"><i className="ti ti-heart" /> Support this program</Link>
+            <Link to="/#volunteer" className="btn pdp-ghost"><i className="ti ti-users" /> Volunteer</Link>
+          </div>
+        </div>
       </div>
-      <div className="program-detail-content">
-        <Link to="/#programs" className="back-link"><i className="ti ti-arrow-left" /> Back to programs</Link>
-        <h1 className="program-detail-title">{program.title}</h1>
-        <div className="program-detail-meta">
-          <i className="ti ti-trending-up" /> {program.stat}
+
+      {/* ── BODY: write-up + cards LEFT | collage RIGHT ── */}
+      <div className="pdp-body">
+        {/* LEFT */}
+        <div className="pdp-writeup">
+          <div className="pdp-about-label">
+            <span className="pdp-dot" style={{ background: program.color }} />
+            About this programme
+          </div>
+          <p className="pdp-about-lead">{program.details?.[0]}</p>
+          {program.details?.slice(1).map((para, i) => (
+            <p key={i} className="pdp-about-body">{para}</p>
+          ))}
+
+          {program.ps && (
+            <div className="pdp-ps">
+              <span className="pdp-ps-label">P.S.</span>
+              {program.ps}
+            </div>
+          )}
+
+          {program.highlights?.length > 0 && (
+            <div className="pdp-left-highlights">
+              <div className="pdp-highlights-label">What we do</div>
+              <div className="pdp-highlights-grid">
+                {program.highlights.map((h, i) => {
+                  const isActive = i === activeIdx;
+                  return (
+                    <div
+                      key={i}
+                      className={`pdp-hcard${isActive ? ' pdp-hcard-active' : ''}`}
+                      style={isActive
+                        ? { background: program.color, border: 'none' }
+                        : { background: `${program.color}10`, border: `1.5px solid ${program.color}30` }
+                      }
+                      onClick={() => setActiveIdx(i)}
+                    >
+                      <i className="ti ti-arrow-up-right pdp-hcard-arrow" style={{ color: isActive ? 'rgba(255,255,255,0.6)' : program.color }} />
+                      <div className="pdp-hcard-icon" style={isActive
+                        ? { background: 'rgba(255,255,255,0.2)', color: '#fff' }
+                        : { background: `${program.color}20`, color: program.color }}>
+                        <i className={h.icon} />
+                      </div>
+                      <div className="pdp-hcard-title" style={{ color: isActive ? '#fff' : 'var(--ink)' }}>{h.title}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
-        {(program.details || [program.description]).map((para, i) => (
-          <p key={i}>{para}</p>
-        ))}
-        <div className="program-detail-cta">
-          <Link to="/#donate" className="btn btn-primary"><i className="ti ti-heart" /> Support this program</Link>
-          <Link to="/#volunteer" className="btn btn-ghost"><i className="ti ti-users" /> Volunteer with us</Link>
+
+        {/* RIGHT: collage changes per active card */}
+        <div className="pdp-right-col">
+          {collageImgs.length >= 3 ? (
+            <div className="pdp-collage" key={activeIdx}>
+              <img src={collageImgs[0]} alt="" className="pdp-collage-tall" />
+              <div className="pdp-collage-stack">
+                <img src={collageImgs[1]} alt="" className="pdp-collage-sm" />
+                <img src={collageImgs[2]} alt="" className="pdp-collage-sm" />
+              </div>
+            </div>
+          ) : (
+            <div className="pdp-img-frame" style={{ background: `${program.color}18` }}>
+              {program.image_url
+                ? <img src={program.image_url} alt={program.title} className="pdp-img" />
+                : <i className={program.icon} style={{ fontSize: '5rem', color: program.color, opacity: 0.5 }} />
+              }
+            </div>
+          )}
+          {activeH && (
+            <div className="pdp-collage-label" style={{ borderColor: `${program.color}40`, color: program.color }}>
+              <i className={activeH.icon} /> {activeH.title}
+            </div>
+          )}
         </div>
+      </div>
+
+      {/* ── BOTTOM: All Programs link ── */}
+      <div className="pdp-footer">
+        <Link to="/#programs" className="pdp-all-programs">
+          <i className="ti ti-grid-dots" /> View all programs
+        </Link>
       </div>
     </div>
   );
@@ -134,12 +230,19 @@ const defaultPrograms = [
     color: '#854F0B',
     image_url: '',
     title: 'Food & nutrition',
-    description: 'Daily grocery distribution reaching 500+ doorsteps. We address malnutrition and ensure no family goes to bed hungry.',
+    description: "A warm meal is more than food — it's comfort, dignity, and hope. We ensure no family goes to bed hungry.",
     stat: '500+ families served daily',
+    highlights: [
+      { title: 'Monthly grocery distribution', icon: 'ti ti-shopping-cart', images: ['https://picsum.photos/seed/groc1/600/700','https://picsum.photos/seed/groc2/600/380','https://picsum.photos/seed/groc3/600/380'] },
+      { title: 'Community kitchens', icon: 'ti ti-soup', images: ['https://picsum.photos/seed/kit1/600/700','https://picsum.photos/seed/kit2/600/380','https://picsum.photos/seed/kit3/600/380'] },
+      { title: 'Nutrition drives', icon: 'ti ti-apple', images: ['https://picsum.photos/seed/nutr1/600/700','https://picsum.photos/seed/nutr2/600/380','https://picsum.photos/seed/nutr3/600/380'] },
+      { title: 'Nutrition awareness', icon: 'ti ti-bulb', images: ['https://picsum.photos/seed/nawr1/600/700','https://picsum.photos/seed/nawr2/600/380','https://picsum.photos/seed/nawr3/600/380'] },
+    ],
     details: [
-      "Our food and nutrition program is the backbone of Swabhimaan's daily work. Every morning, our teams pack and deliver grocery kits, cooked meals, and ration supplies to families across Neelasandra, LR Nagar, Rajendranagar, Karesandra, and Subhashnagar.",
-      'Each grocery kit provides a family of four with essential staples for up to two weeks. For households with infants or elderly members, we add nutrition-dense supplements based on need assessments done by our field volunteers.',
-      "Donors can sponsor a single grocery kit, fund a month of cooked meals for a family, or set up a recurring monthly contribution. Every food request raised through our 'Send food' form is verified by a local volunteer before delivery, with photo updates shared afterwards.",
+      'Every day, Swabhimaan reaches families who struggle to put food on the table. Through monthly grocery distribution, community kitchens, nutrition drives, and emergency relief, we ensure that vulnerable households receive not just meals, but the assurance that someone cares.',
+      'The concept of freebies is not encouraged in the current setup, but Swabhimaan\'s point of view is different. Freebies are not offered assuming that people are weak, incapable, or unable to fight their battles. They are offered to strengthen them enough to fight that battle.',
+      'And when we say strength, we mean real, physical/mental strength — the strength to wake up the next day, the zeal to keep fighting, to continue to fight, and to earn their next meal. It is about giving them the support/hope they need to reach that point.',
+      'Because sometimes, a person does not need someone to fight their battle for them. They just need enough support to get back on their feet and find the strength to fight it themselves. That is what Swabhimaan is trying to provide — not a way out of the struggle, but a little strength to face it, survive it, and eventually overcome it on their own.',
     ],
   },
   {
@@ -148,13 +251,22 @@ const defaultPrograms = [
     color: '#0F6E56',
     image_url: '',
     title: 'Education support',
-    description: 'After-school classes, scholarships, and career mentoring for children from underserved neighborhoods.',
+    description: 'Education doesn\'t just change report cards — it changes futures. We create learning environments where every child can dream.',
     stat: '200+ children supported',
-    details: [
-      'We run free after-school tuition centers staffed by trained volunteers and part-time teachers, covering core subjects for students from grade 1 through grade 10.',
-      'Each year, Swabhimaan awards need-based scholarships to high-performing students to cover school fees, books, uniforms, and exam costs, with progress reviewed every term.',
-      'Our career mentoring track connects students in grades 9-12 with volunteer professionals who run monthly sessions on career options, college applications, and digital and English-language skills.',
+    highlights: [
+      { title: 'After-school learning centres', icon: 'ti ti-school', images: ['https://picsum.photos/seed/edu1/600/700','https://picsum.photos/seed/edu2/600/380','https://picsum.photos/seed/edu3/600/380'] },
+      { title: 'NIOS', icon: 'ti ti-certificate', images: ['https://picsum.photos/seed/sch1/600/700','https://picsum.photos/seed/sch2/600/380','https://picsum.photos/seed/sch3/600/380'] },
+      { title: 'Youth Empowerment', icon: 'ti ti-briefcase', images: ['https://picsum.photos/seed/car1/600/700','https://picsum.photos/seed/car2/600/380','https://picsum.photos/seed/car3/600/380'] },
+      { title: 'Digital literacy', icon: 'ti ti-device-laptop', images: ['https://picsum.photos/seed/dig1/600/700','https://picsum.photos/seed/dig2/600/380','https://picsum.photos/seed/dig3/600/380'] },
+      { title: 'Leadership & life skills', icon: 'ti ti-star', images: ['https://picsum.photos/seed/ldr1/600/700','https://picsum.photos/seed/ldr2/600/380','https://picsum.photos/seed/ldr3/600/380'] },
     ],
+    details: [
+    'Swabhimaan treats education as a weapon — a powerful tool to eradicate this so-called helplessness. For over two decades, it has been working in the field of education with the belief that education can transform the current state of an individual as well as their entire family.',
+    'With this belief at its core, Swabhimaan has taken up multiple programmes to address the different barriers that keep children and young people from moving forward. It runs NIOS programmes for school dropouts, giving them an opportunity to return to education and build a better future. Its after-school learning centres help strengthen their understanding and bridge the gaps in learning, especially for children who come from schools where quality education is often not provided in its truest form.',
+    'Swabhimaan also provides scholarships to ease the financial burden on parents and ensure that children can continue their education without having to give it up because of circumstances. Alongside this, its youth empowerment programmes focus on preparing young people not just academically, but as confident, capable and responsible citizens of this country.',
+    'For Swabhimaan, education is not merely about getting a certificate or completing school. It is about giving an individual the knowledge, confidence and ability to change the circumstances they were born into — and, in the process, change the future of their entire family.',
+    ],
+    ps: 'Behind all of this is a core team of teachers who keep bringing these children back to the classroom, time and again, without giving up on them or losing hope. There are also people from different walks of life and fields who come in to share their knowledge, experiences and perspectives, helping these children discover what they are capable of and what they can become.',
   },
   {
     slug: 'healthcare-access',
@@ -162,26 +274,42 @@ const defaultPrograms = [
     color: '#185FA5',
     image_url: '',
     title: 'Healthcare access',
-    description: 'Regular health camps, screenings, and medicine distribution for families in need.',
+    description: 'Healthcare should never be a privilege — it should be a promise. We bring quality care closer to communities.',
     stat: '4 community camps monthly',
-    details: [
-      'Our healthcare access program brings basic diagnostic and treatment services directly to neighborhoods through monthly camps held in partnership with local clinics, hospitals, and volunteer doctors.',
-      'A typical camp includes general health checkups, blood pressure and blood sugar screening, eye checkups, and basic dental screening, with referrals to partner hospitals where needed.',
-      'We maintain a small revolving stock of common medicines distributed free of cost, and run awareness sessions on hygiene, maternal health, and preventive care.',
+    highlights: [
+      { title: 'Community medical camps', icon: 'ti ti-stethoscope', images: ['https://picsum.photos/seed/med1/600/700','https://picsum.photos/seed/med2/600/380','https://picsum.photos/seed/med3/600/380'] },
+      { title: 'Preventive screenings', icon: 'ti ti-heart-rate-monitor', images: ['https://picsum.photos/seed/scr1/600/700','https://picsum.photos/seed/scr2/600/380','https://picsum.photos/seed/scr3/600/380'] },
+      { title: "Women's health", icon: 'ti ti-heart-handshake', images: ['https://picsum.photos/seed/wh1/600/700','https://picsum.photos/seed/wh2/600/380','https://picsum.photos/seed/wh3/600/380'] },
+      { title: 'Hygiene & sanitation', icon: 'ti ti-droplet', images: ['https://picsum.photos/seed/hyg1/600/700','https://picsum.photos/seed/hyg2/600/380','https://picsum.photos/seed/hyg3/600/380'] },
+      { title: 'Health education', icon: 'ti ti-book-health', images: ['https://picsum.photos/seed/hed1/600/700','https://picsum.photos/seed/hed2/600/380','https://picsum.photos/seed/hed3/600/380'] },
     ],
+    details: [
+      'Swabhimaan brings quality healthcare closer to communities through medical camps, preventive screenings, awareness programmes, and health consultations. We believe prevention is just as important as treatment.',
+      'From children\'s health to women\'s wellness and senior citizen care, our initiatives empower individuals with knowledge, early intervention, and access to essential healthcare services.',
+      'Our initiatives: Community medical camps · Preventive health screenings · Women\'s health programmes · Hygiene and sanitation awareness · Affordable healthcare support · Health education workshops.'],
+       ps : 'One might ask, what can we call affordable healthcare in today’s world, when even a basic consultation can cost ₹500 or more? But this is where Swabhimaan is different. It is true — Swabhimaan provides healthcare at an affordable cost, sometimes for just a few tens of rupees. The aim is simple: healthcare should not become a burden that people have to choose between and their next meal.'
+  
   },
   {
     slug: 'livelihood-skills',
+    hidden: true,
     icon: 'ti ti-tool',
     color: '#6D4AFF',
     image_url: '',
     title: 'Livelihood & skill training',
-    description: 'Vocational training in tailoring, computer skills, and trades that help adults build sustainable income.',
+    description: 'A skill is more than a livelihood — it\'s confidence, independence, and opportunity. We open doors for youth and adults.',
     stat: '150+ adults trained',
+    highlights: [
+      { title: 'Vocational skill training', icon: 'ti ti-tool', images: ['https://picsum.photos/seed/voc1/600/700','https://picsum.photos/seed/voc2/600/380','https://picsum.photos/seed/voc3/600/380'] },
+      { title: 'Computer & digital literacy', icon: 'ti ti-device-laptop', images: ['https://picsum.photos/seed/cmp1/600/700','https://picsum.photos/seed/cmp2/600/380','https://picsum.photos/seed/cmp3/600/380'] },
+      { title: 'Entrepreneurship', icon: 'ti ti-rocket', images: ['https://picsum.photos/seed/ent1/600/700','https://picsum.photos/seed/ent2/600/380','https://picsum.photos/seed/ent3/600/380'] },
+      { title: 'Financial literacy', icon: 'ti ti-coins', images: ['https://picsum.photos/seed/fin1/600/700','https://picsum.photos/seed/fin2/600/380','https://picsum.photos/seed/fin3/600/380'] },
+      { title: 'Job placement support', icon: 'ti ti-briefcase', images: ['https://picsum.photos/seed/job1/600/700','https://picsum.photos/seed/job2/600/380','https://picsum.photos/seed/job3/600/380'] },
+    ],
     details: [
-      'Our livelihood program runs short, practical vocational courses — tailoring and embroidery, basic computer operation, mobile repair, and beauty & wellness — designed around skills with real, local demand.',
-      'Each batch runs for 6-10 weeks and participants receive the tools or starter kits they need to begin working immediately after completing the course.',
-      'We connect graduates with local job openings and support a few participants each year in setting up micro-enterprises with small seed grants and ongoing mentorship.',
+      'Swabhimaan equips youth and adults with practical, industry-relevant skills that help them secure employment, start businesses, and become financially independent.',
+      'Whether it\'s digital skills, tailoring, communication, entrepreneurship, or workplace readiness, our programmes empower individuals to build sustainable careers and brighter futures.',
+      'Training includes: Vocational skill development · Computer and digital literacy · Communication and employability skills · Entrepreneurship training · Financial literacy · Job readiness and placement assistance.',
     ],
   },
   {
@@ -190,13 +318,22 @@ const defaultPrograms = [
     color: '#C2185B',
     image_url: '',
     title: 'Women empowerment',
-    description: 'Self-help groups, financial literacy, and leadership programs that help women become decision-makers in their families and communities.',
+    description: 'When a woman rises, an entire family rises with her. We support women in building independence and leading change.',
     stat: '30+ self-help groups active',
-    details: [
-      'We organize women into self-help groups (SHGs) of 10-15 members each, who meet weekly to save small amounts collectively and access low-interest group loans.',
-      'Financial literacy sessions cover budgeting, banking, digital payments, and government schemes for women entrepreneurs.',
-      'SHG members are prioritized for our livelihood training batches, creating a direct path from financial literacy to income generation to leadership.',
+    highlights: [
+      { title: 'Self-help groups', icon: 'ti ti-users-group', images: ['https://picsum.photos/seed/shg1/600/700','https://picsum.photos/seed/shg2/600/380','https://picsum.photos/seed/shg3/600/380'] },
+      { title: 'Entrepreneurship support', icon: 'ti ti-rocket', images: ['https://picsum.photos/seed/wep1/600/700','https://picsum.photos/seed/wep2/600/380','https://picsum.photos/seed/wep3/600/380'] },
+      { title: 'Skill development', icon: 'ti ti-needle-thread', images: ['https://picsum.photos/seed/skd1/600/700','https://picsum.photos/seed/skd2/600/380','https://picsum.photos/seed/skd3/600/380'] },
+      { title: 'Financial literacy', icon: 'ti ti-coins', images: ['https://picsum.photos/seed/wfl1/600/700','https://picsum.photos/seed/wfl2/600/380','https://picsum.photos/seed/wfl3/600/380'] },
+      { title: 'Leadership programmes', icon: 'ti ti-crown', images: ['https://picsum.photos/seed/wld1/600/700','https://picsum.photos/seed/wld2/600/380','https://picsum.photos/seed/wld3/600/380'] },
     ],
+    details: [
+      'Swabhimaan supports women in discovering their strengths, building financial independence, and becoming leaders within their communities. Through self-help groups, skill development, entrepreneurship, and financial literacy, we help women create lasting change for themselves and future generations.',
+      'Swabhimaan’s main and foremost goal has always been to empower women and create opportunities for them to thrive with dignity and confidence. It has created various programmes that help women build a livelihood of their own — from providing tailoring machines so they can earn through their skills, to beautician classes that enable them to pursue employment opportunities.',
+      'Swabhimaan also creates women entrepreneurs by supporting them through microfinancing and providing the initial financial support they need to start something of their own.',
+      'Most of the in house programmes like the nutrition drives, food distribution are supported by women of the same community, this way it creates jobs and responsibility.',
+      ],
+      ps :'And Swabhimaan wants to say this out loud and clear: women have shown an extraordinary sense of responsibility and loyalty towards this support. In fact, 98% of the women supported through these initiatives have returned the principal amount.That 98% is more than just a number. It reflects their commitment, their responsibility and their determination to build something for themselves and their families. Women are the true pillars of their homes, and when they are given an opportunity, they prove that trust can be repaid with responsibility. If 98% of women have demonstrated that commitment, can there be a stronger testament to the fact that investing in a woman is an investment in an entire family.'
   },
   {
     slug: 'community-environment',
@@ -206,6 +343,10 @@ const defaultPrograms = [
     title: 'Community awareness & environment',
     description: 'Awareness drives on hygiene, sanitation, civic rights, and environmental sustainability to build healthier, cleaner neighborhoods.',
     stat: '12+ awareness drives yearly',
+    highlights: [
+      { title: 'Plogging', icon: 'ti ti-users-group', images: ['https://picsum.photos/seed/shg1/600/700','https://picsum.photos/seed/shg2/600/380','https://picsum.photos/seed/shg3/600/380'] },
+      { title: 'Waste management', icon: 'ti ti-rocket', images: ['https://picsum.photos/seed/wep1/600/700','https://picsum.photos/seed/wep2/600/380','https://picsum.photos/seed/wep3/600/380'] },
+    ],
     details: [
       'We run regular campaigns on hygiene and sanitation, helping households adopt practices like handwashing, safe drinking water storage, and proper waste disposal.',
       'Our civic rights workshops help residents access entitlements like ration cards, Aadhaar-linked benefits, voter registration, and grievance redressal processes.',
@@ -308,6 +449,9 @@ function getYoutubeEmbed(url) {
 
 function Home({ activities, programs, stories, faqs, trust, trustees, donors, videos, settings = {}, fdOpen, setFdOpen, volOpen, setVolOpen }) {
   const [galleryActivity, setGalleryActivity] = useState(null);
+  const [videoMuted, setVideoMuted] = useState(true);
+  const videoRef = useRef(null);
+  useEffect(() => { if (videoRef.current) videoRef.current.muted = videoMuted; }, [videoMuted]);
   const [showCalendar, setShowCalendar] = useState(false);
   const [calMonth, setCalMonth] = useState(() => { const d = new Date(); d.setDate(1); return d; });
   const [selectedCalDate, setSelectedCalDate] = useState(null);
@@ -518,20 +662,12 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
             <br />
             -F. Scott Fitzgerald,
           </h1>
-          <p className="hero-about-text">
-            Swabhimaan is not just an organization; it is a place where every individual is nurtured, supported, and cared for, irrespective of their circumstances or background. It stands firmly on the belief that every person on this planet deserves to be treated with dignity and respect.
-          <p>It is a place that empowers people and helps them realize their potential. With a strong focus on women and children—the very 
-              foundation and building blocks of society—Swabhimaan works tirelessly
-               to create opportunities that lead to lasting change.</p>
-          <p>Over the years, its work has expanded across multiple domains, 
-            and its journey of impact continues to grow. What began with a vision for education gradually expanded to include food support,
-             ration distribution, micro-lending, healthcare initiatives, and even a full-fledged school-like setup. </p>
-          <p>Swabhimaan has also created employment opportunities 
-            through initiatives such as paper making and has established a crèche that enables women to upskill
-             themselves while ensuring their children are cared for in a safe environment. </p>
-          <p>Its mission continues to evolve, touching lives 
-            and building stronger communities every day.</p>
-          </p>
+          <div className="hero-about-text">
+            <p>Swabhimaan is not just an organization; it is a place where every individual is nurtured, supported, and cared for, irrespective of their circumstances or background. It stands firmly on the belief that every person on this planet deserves to be treated with dignity and respect.</p>
+            <p>It is a place that empowers people and helps them realize their potential. With a strong focus on women and children—the very foundation and building blocks of society—Swabhimaan works tirelessly to create opportunities that lead to lasting change.</p>
+            <p>Over the years, its work has expanded across multiple domains, and its journey of impact continues to grow. What began with a vision for education gradually expanded to include food support, ration distribution, micro-lending, healthcare initiatives, and even a full-fledged school-like setup.</p>
+            <p>Swabhimaan has also created employment opportunities through initiatives such as paper making and has established a crèche that enables women to upskill themselves while ensuring their children are cared for in a safe environment. Its mission continues to evolve, touching lives and building stronger communities every day.</p>
+          </div>
           <div className="hero-btns">
             <a href="#donate" className="btn btn-primary">
               <i className="ti ti-heart" /> Donate now
@@ -546,11 +682,31 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
         </div>
         <div className="hero-visual fade-up-2">
           <div className="hero-img-wrap">
-            {activities[0]?.image_url
-              ? <img src={activities[0].image_url} alt={activities[0].title} />
+            {settings?.hero_video_url
+              ? <>
+                  <video
+                    ref={videoRef}
+                    key={settings.hero_video_url}
+                    autoPlay muted loop playsInline
+                    className="hero-video"
+                    src={settings.hero_video_url}
+                  >
+                    <source
+                      src={settings.hero_video_url}
+                      type={settings.hero_video_url.endsWith('.webm') ? 'video/webm' : 'video/mp4'}
+                    />
+                  </video>
+                  <button
+                    className="video-mute-btn"
+                    onClick={() => setVideoMuted(m => !m)}
+                    title={videoMuted ? 'Unmute' : 'Mute'}
+                  >
+                    <i className={videoMuted ? 'ti ti-volume-off' : 'ti ti-volume'} />
+                  </button>
+                </>
               : <div className="hero-img-placeholder">
-                  <i className="ti ti-camera" />
-                  <span>Add a photo</span>
+                  <i className="ti ti-video" />
+                  <span>Add a hero video</span>
                 </div>
             }
           </div>
@@ -694,7 +850,7 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
           Every program is designed to create lasting self-reliance — not dependency. We build skills, connections, and confidence alongside food, health, and education.
         </p>
         <div className="programs-bento">
-          {programs.map((program, idx) => (
+          {programs.filter(p => !p.hidden).map((program, idx) => (
             <Link
               key={program.slug}
               to={`/programs/${program.slug}`}
@@ -1109,13 +1265,17 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
           <div className="trustees-grid">
             {trustees.map((person, index) => (
               <div key={`${person.name}-${index}`} className="trustee-card">
-                {person.photo_url ? (
-                  <img src={person.photo_url} alt={person.name} className="trustee-photo" />
-                ) : (
-                  <div className="trustee-photo trustee-photo-placeholder">{person.name.charAt(0)}</div>
-                )}
-                <div className="trustee-name">{person.name}</div>
-                <div className="trustee-role">{person.role}</div>
+                <div className="trustee-photo-wrap">
+                  {person.photo_url
+                    ? <img src={person.photo_url} alt={person.name} className="trustee-photo" />
+                    : <div className="trustee-photo trustee-photo-placeholder">{person.name.charAt(0)}</div>
+                  }
+                </div>
+                <div className="trustee-info">
+                  {person.role && <div className="trustee-role">{person.role}</div>}
+                  <div className="trustee-name">{person.name}</div>
+                  {person.bio && <p className="trustee-bio">{person.bio}</p>}
+                </div>
               </div>
             ))}
           </div>
@@ -1276,16 +1436,16 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
           <div>
             <div className="footer-col-title">Explore</div>
             <div className="footer-links">
-              <a href="#activities">Activities</a>
-              <a href="#programs">Programs</a>
-              <a href="#donate">Donate</a>
+              <Link to="/#activities">Activities</Link>
+              <Link to="/#programs">Programs</Link>
+              <Link to="/#donate">Donate</Link>
             </div>
           </div>
           <div>
             <div className="footer-col-title">Support</div>
             <div className="footer-links">
-              <a href="#volunteer">Volunteer</a>
-              <a href="#faq">FAQ</a>
+              <Link to="/#volunteer">Volunteer</Link>
+              <Link to="/#faq">FAQ</Link>
               <a href="/Admin">Admin</a>
             </div>
           </div>
@@ -1346,14 +1506,25 @@ function App() {
           responses.map((res) => (res.ok ? res.json() : null))
         );
         if (activitiesData) setActivities(activitiesData);
-        if (programsData) setPrograms(programsData);
+        if (programsData) setPrograms(programsData.map(p => {
+          const def = defaultPrograms.find(d => d.slug === p.slug);
+          return def ? {
+            ...def, ...p,
+            highlights: def.highlights.map((h, i) => ({
+              ...h,
+              images: (p.highlight_images?.[String(i)]?.filter(Boolean).length === 3
+                ? p.highlight_images[String(i)]
+                : h.images),
+            })),
+          } : p;
+        }));
         if (storiesData) setStories(storiesData);
         if (faqsData) setFaqs(faqsData);
         if (trustData) setTrust(trustData);
         if (trusteesData) setTrustees(trusteesData);
         if (donorsData) setDonors(donorsData);
         if (videosData) setVideos(videosData);
-        if (settingsData) setSettings(settingsData);
+        if (settingsData) { setSettings(settingsData); }
       } catch (err) {
         console.warn('Backend fetch failed:', err);
       }
@@ -1365,30 +1536,30 @@ function App() {
   return (
     <div className="app">
       <nav>
-        <a href="#home" className="nav-logo">
+        <Link to="/" className="nav-logo">
           Swabhi<span>maan</span>
-        </a>
+        </Link>
         <ul className="nav-links">
-          <li><a href="#about">About</a></li>
-          <li><a href="#activities">Activities</a></li>
-          <li><a href="#programs">Programs</a></li>
-          <li><a href="#help">How to help</a></li>
-          <li><a href="#food-delivery" onClick={() => setFdOpen(true)}>Send food</a></li>
-          <li><a href="#volunteer" onClick={() => setVolOpen(true)}>Volunteer</a></li>
-          <li><a href="#donate">Donate</a></li>
-          <li><a href="#stories">Stories</a></li>
-          <li><a href="#videos">Videos</a></li>
-          <li><a href="#faq">FAQ</a></li>
-          <li><a href="#trust">Trust</a></li>
-          <li><a href="#donors">Donors</a></li>
+          <li><Link to="/#about">About</Link></li>
+          <li><Link to="/#activities">Activities</Link></li>
+          <li><Link to="/#programs">Programs</Link></li>
+          <li><Link to="/#help">How to help</Link></li>
+          <li><Link to="/#food-delivery" onClick={() => setFdOpen(true)}>Send food</Link></li>
+          <li><Link to="/#volunteer" onClick={() => setVolOpen(true)}>Volunteer</Link></li>
+          <li><Link to="/#donate">Donate</Link></li>
+          <li><Link to="/#stories">Stories</Link></li>
+          <li><Link to="/#videos">Videos</Link></li>
+          <li><Link to="/#faq">FAQ</Link></li>
+          <li><Link to="/#trust">Trust</Link></li>
+          <li><Link to="/#donors">Donors</Link></li>
         </ul>
         <div className="nav-actions">
-          <a href="#volunteer" className="btn btn-ghost" onClick={() => setVolOpen(true)}>
+          <Link to="/#volunteer" className="btn btn-ghost" onClick={() => setVolOpen(true)}>
             <i className="ti ti-users" /> Volunteer
-          </a>
-          <a href="#donate" className="btn btn-primary">
+          </Link>
+          <Link to="/#donate" className="btn btn-primary">
             <i className="ti ti-heart" /> Donate
-          </a>
+          </Link>
         </div>
         <button className="nav-hamburger" onClick={() => setMenuOpen(v => !v)} aria-label="Menu">
           <i className={menuOpen ? 'ti ti-x' : 'ti ti-menu-2'} />
@@ -1397,28 +1568,29 @@ function App() {
       {menuOpen && (
         <div className="mobile-menu">
           <ul>
-            <li><a href="#about" onClick={closeMenu}>About</a></li>
-            <li><a href="#activities" onClick={closeMenu}>Activities</a></li>
-            <li><a href="#programs" onClick={closeMenu}>Programs</a></li>
-            <li><a href="#help" onClick={closeMenu}>How to help</a></li>
-            <li><a href="#food-delivery" onClick={() => { setFdOpen(true); closeMenu(); }}>Send food</a></li>
-            <li><a href="#volunteer" onClick={() => { setVolOpen(true); closeMenu(); }}>Volunteer</a></li>
-            <li><a href="#stories" onClick={closeMenu}>Stories</a></li>
-            <li><a href="#videos" onClick={closeMenu}>Videos</a></li>
-            <li><a href="#faq" onClick={closeMenu}>FAQ</a></li>
-            <li><a href="#trust" onClick={closeMenu}>Trust</a></li>
-            <li><a href="#donors" onClick={closeMenu}>Donors</a></li>
+            <li><Link to="/#about" onClick={closeMenu}>About</Link></li>
+            <li><Link to="/#activities" onClick={closeMenu}>Activities</Link></li>
+            <li><Link to="/#programs" onClick={closeMenu}>Programs</Link></li>
+            <li><Link to="/#help" onClick={closeMenu}>How to help</Link></li>
+            <li><Link to="/#food-delivery" onClick={() => { setFdOpen(true); closeMenu(); }}>Send food</Link></li>
+            <li><Link to="/#volunteer" onClick={() => { setVolOpen(true); closeMenu(); }}>Volunteer</Link></li>
+            <li><Link to="/#stories" onClick={closeMenu}>Stories</Link></li>
+            <li><Link to="/#videos" onClick={closeMenu}>Videos</Link></li>
+            <li><Link to="/#faq" onClick={closeMenu}>FAQ</Link></li>
+            <li><Link to="/#trust" onClick={closeMenu}>Trust</Link></li>
+            <li><Link to="/#donors" onClick={closeMenu}>Donors</Link></li>
           </ul>
           <div className="mobile-menu-actions">
-            <a href="#donate" className="btn btn-primary" style={{ justifyContent: 'center' }} onClick={closeMenu}>
+            <Link to="/#donate" className="btn btn-primary" style={{ justifyContent: 'center' }} onClick={closeMenu}>
               <i className="ti ti-heart" /> Donate now
-            </a>
-            <a href="#volunteer" className="btn btn-ghost" style={{ justifyContent: 'center' }} onClick={() => { setVolOpen(true); closeMenu(); }}>
+            </Link>
+            <Link to="/#volunteer" className="btn btn-ghost" style={{ justifyContent: 'center' }} onClick={() => { setVolOpen(true); closeMenu(); }}>
               <i className="ti ti-users" /> Volunteer
-            </a>
+            </Link>
           </div>
         </div>
       )}
+      <ScrollToHash />
       <Routes>
         <Route
           path="/"

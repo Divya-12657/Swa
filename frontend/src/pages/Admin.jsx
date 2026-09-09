@@ -2,7 +2,18 @@ import { useEffect, useState } from 'react';
 
 function SettingsTab({ token }) {
   const SITE_SETTINGS = [
-    { key: 'hero_bg_url', label: 'Hero background image', hint: 'Shown as a subtle background behind the homepage quote & description.' },
+    {
+      key: 'hero_video_url',
+      type: 'video',
+      label: 'Hero video',
+      hint: 'Autoplays silently on the homepage hero. Upload an MP4 or WebM file (recommended: under 20 MB, landscape orientation).',
+    },
+    {
+      key: 'hero_bg_url',
+      type: 'image',
+      label: 'Hero background image',
+      hint: 'Shown as a subtle background behind the homepage quote & description.',
+    },
   ];
   const [vals, setVals] = useState({});
   const [uploading, setUploading] = useState({});
@@ -15,18 +26,23 @@ function SettingsTab({ token }) {
   async function handleUpload(key, e) {
     const file = e.target.files?.[0]; if (!file) return; e.target.value = '';
     setUploading(u => ({ ...u, [key]: true }));
+    setMsgs(m => ({ ...m, [key]: '⏳ Uploading…' }));
     const fd = new FormData(); fd.append('file', file);
     try {
-      const res = await fetch('/api/upload-image', { method: 'POST', body: fd });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.detail || 'Upload failed');
-      await fetch(`/api/admin/settings/${key}`, {
+      const uploadRes = await fetch('/api/upload-image', { method: 'POST', body: fd });
+      const result = await uploadRes.json();
+      if (!uploadRes.ok) throw new Error(result.detail || 'Upload failed');
+      const saveRes = await fetch(`/api/admin/settings/${key}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
         body: JSON.stringify({ value: result.url }),
       });
+      if (!saveRes.ok) {
+        const b = await saveRes.json().catch(() => ({}));
+        throw new Error(b.detail || `Settings save failed (${saveRes.status}) — check your admin token`);
+      }
       setVals(v => ({ ...v, [key]: result.url }));
-      setMsgs(m => ({ ...m, [key]: '✅ Saved' }));
+      setMsgs(m => ({ ...m, [key]: '✅ Saved — refresh the homepage to see it' }));
     } catch (err) { setMsgs(m => ({ ...m, [key]: `❌ ${err.message}` })); }
     finally { setUploading(u => ({ ...u, [key]: false })); }
   }
@@ -38,27 +54,48 @@ function SettingsTab({ token }) {
       body: JSON.stringify({ value: '' }),
     });
     setVals(v => ({ ...v, [key]: '' }));
-    setMsgs(m => ({ ...m, [key]: '✅ Cleared' }));
+    setMsgs(m => ({ ...m, [key]: '✅ Removed' }));
   }
 
   return (
     <div style={{ maxWidth: 640 }}>
       <p style={{ fontSize: '0.875rem', color: 'var(--ink-mid)', marginBottom: 24 }}>Site-wide settings. Changes take effect after page refresh.</p>
-      {SITE_SETTINGS.map(({ key, label, hint }) => (
+      {SITE_SETTINGS.map(({ key, type, label, hint }) => (
         <div key={key} style={{ padding: '18px 20px', border: '1px solid var(--border)', borderRadius: 12, background: 'var(--white)', marginBottom: 16 }}>
-          <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: 4 }}>{label}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <i className={type === 'video' ? 'ti ti-video' : 'ti ti-photo'} style={{ color: 'var(--saffron)', fontSize: '1.1rem' }} />
+            <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{label}</span>
+          </div>
           <div style={{ fontSize: '0.78rem', color: 'var(--ink-light)', marginBottom: 12 }}>{hint}</div>
+
           {vals[key] && (
-            <div style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <img src={vals[key]} alt="" style={{ width: 120, height: 70, objectFit: 'cover', borderRadius: 8 }} />
-              <button onClick={() => handleClear(key)} style={{ fontSize: '0.78rem', color: '#c00', background: 'none', border: '1px solid #c00', borderRadius: 20, padding: '4px 12px', cursor: 'pointer' }}>Remove</button>
+            <div style={{ marginBottom: 12 }}>
+              {type === 'video'
+                ? <video src={vals[key]} controls muted style={{ width: '100%', maxHeight: 180, borderRadius: 8, background: '#000', display: 'block', marginBottom: 8 }} />
+                : <img src={vals[key]} alt="" style={{ width: 140, height: 80, objectFit: 'cover', borderRadius: 8, display: 'block', marginBottom: 8 }} />
+              }
+              <div style={{ fontSize: '0.68rem', color: 'var(--ink-light)', wordBreak: 'break-all', marginBottom: 8, padding: '4px 8px', background: 'var(--surface)', borderRadius: 6 }}>
+                {vals[key]}
+              </div>
+              <button onClick={() => handleClear(key)} style={{ fontSize: '0.78rem', color: '#c00', background: 'none', border: '1px solid #c00', borderRadius: 20, padding: '4px 12px', cursor: 'pointer' }}>
+                Remove {type}
+              </button>
             </div>
           )}
-          {msgs[key] && <div style={{ fontSize: '0.75rem', marginBottom: 8 }}>{msgs[key]}</div>}
+
+          {msgs[key] && <div style={{ fontSize: '0.75rem', marginBottom: 10, color: msgs[key].startsWith('❌') ? '#c00' : 'var(--ink-mid)' }}>{msgs[key]}</div>}
+
           <label>
-            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleUpload(key, e)} disabled={uploading[key]} />
-            <span style={{ display: 'inline-block', padding: '7px 16px', background: 'var(--saffron)', color: '#fff', borderRadius: 20, fontSize: '0.8rem', fontWeight: 500, cursor: uploading[key] ? 'wait' : 'pointer' }}>
-              {uploading[key] ? 'Uploading…' : vals[key] ? 'Change image' : 'Upload image'}
+            <input
+              type="file"
+              accept={type === 'video' ? 'video/mp4,video/webm,video/*' : 'image/*'}
+              style={{ display: 'none' }}
+              onChange={e => handleUpload(key, e)}
+              disabled={uploading[key]}
+            />
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', background: uploading[key] ? 'var(--border)' : 'var(--saffron)', color: uploading[key] ? 'var(--ink-light)' : '#fff', borderRadius: 20, fontSize: '0.8rem', fontWeight: 500, cursor: uploading[key] ? 'wait' : 'pointer', transition: 'background .2s' }}>
+              <i className={uploading[key] ? 'ti ti-loader-2' : type === 'video' ? 'ti ti-upload' : 'ti ti-photo-up'} />
+              {uploading[key] ? 'Uploading…' : vals[key] ? `Change ${type}` : `Upload ${type}`}
             </span>
           </label>
         </div>
@@ -66,6 +103,44 @@ function SettingsTab({ token }) {
     </div>
   );
 }
+
+const PROGRAM_HIGHLIGHTS = {
+  'food-nutrition': [
+    { title: 'Monthly grocery distribution', icon: 'ti ti-shopping-cart' },
+    { title: 'Community kitchens',           icon: 'ti ti-soup' },
+    { title: 'Nutrition drives',             icon: 'ti ti-apple' },
+    { title: 'Emergency food relief',        icon: 'ti ti-urgent' },
+    { title: 'Nutrition awareness',          icon: 'ti ti-bulb' },
+  ],
+  'education-support': [
+    { title: 'After-school learning centres', icon: 'ti ti-school' },
+    { title: 'Scholarships',                  icon: 'ti ti-certificate' },
+    { title: 'Career mentoring',              icon: 'ti ti-briefcase' },
+    { title: 'Digital literacy',              icon: 'ti ti-device-laptop' },
+    { title: 'Leadership & life skills',      icon: 'ti ti-star' },
+  ],
+  'healthcare-access': [
+    { title: 'Community medical camps',  icon: 'ti ti-stethoscope' },
+    { title: 'Preventive screenings',   icon: 'ti ti-heart-rate-monitor' },
+    { title: "Women's health",          icon: 'ti ti-heart-handshake' },
+    { title: 'Hygiene & sanitation',    icon: 'ti ti-droplet' },
+    { title: 'Health education',        icon: 'ti ti-book-health' },
+  ],
+  'livelihood-skills': [
+    { title: 'Vocational skill training',    icon: 'ti ti-tool' },
+    { title: 'Computer & digital literacy', icon: 'ti ti-device-laptop' },
+    { title: 'Entrepreneurship',            icon: 'ti ti-rocket' },
+    { title: 'Financial literacy',          icon: 'ti ti-coins' },
+    { title: 'Job placement support',       icon: 'ti ti-briefcase' },
+  ],
+  'women-empowerment': [
+    { title: 'Self-help groups',        icon: 'ti ti-users-group' },
+    { title: 'Entrepreneurship support', icon: 'ti ti-rocket' },
+    { title: 'Skill development',       icon: 'ti ti-needle-thread' },
+    { title: 'Financial literacy',      icon: 'ti ti-coins' },
+    { title: 'Leadership programmes',   icon: 'ti ti-crown' },
+  ],
+};
 
 const CATEGORY_META = {
   'Food drive':        { badge: 'b-food',   icon: 'ti ti-basket',           color: '#854F0B' },
@@ -170,9 +245,18 @@ function Admin() {
   const [programs, setPrograms] = useState([]);
   const [progMsg, setProgMsg] = useState({});
   const [progUploading, setProgUploading] = useState({});
+  const [expandedProg, setExpandedProg] = useState(null);
+  const [hlImages, setHlImages] = useState({});   // {slug: {h_idx: [url0,url1,url2]}}
+  const [hlUploading, setHlUploading] = useState({});
+  const [hlMsg, setHlMsg] = useState({});
 
   useEffect(() => {
-    fetch('/api/programs').then(r => r.json()).then(setPrograms).catch(() => {});
+    fetch('/api/programs').then(r => r.json()).then(data => {
+      setPrograms(data);
+      const map = {};
+      data.forEach(p => { map[p.slug] = p.highlight_images || {}; });
+      setHlImages(map);
+    }).catch(() => {});
   }, []);
 
   async function handleProgImageUpload(slug, e) {
@@ -180,6 +264,7 @@ function Admin() {
     if (!file) return;
     e.target.value = '';
     setProgUploading(p => ({ ...p, [slug]: true }));
+    setProgMsg(m => ({ ...m, [slug]: '⏳ Uploading…' }));
     const fd = new FormData();
     fd.append('file', file);
     try {
@@ -192,11 +277,57 @@ function Admin() {
         body: JSON.stringify({ image_url: result.url }),
       });
       setPrograms(prev => prev.map(p => p.slug === slug ? { ...p, image_url: result.url } : p));
-      setProgMsg(m => ({ ...m, [slug]: '✅ Image updated' }));
+      setProgMsg(m => ({ ...m, [slug]: '✅ Saved — visible on the program page' }));
     } catch (err) {
       setProgMsg(m => ({ ...m, [slug]: `❌ ${err.message}` }));
     } finally {
       setProgUploading(p => ({ ...p, [slug]: false }));
+    }
+  }
+
+  async function handleProgImageRemove(slug) {
+    try {
+      await fetch(`/api/admin/programs/${slug}/image`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
+        body: JSON.stringify({ image_url: '' }),
+      });
+      setPrograms(prev => prev.map(p => p.slug === slug ? { ...p, image_url: '' } : p));
+      setProgMsg(m => ({ ...m, [slug]: '✅ Removed' }));
+    } catch (err) {
+      setProgMsg(m => ({ ...m, [slug]: `❌ ${err.message}` }));
+    }
+  }
+
+  async function handleHlUpload(slug, hIdx, imgIdx, e) {
+    const file = e.target.files?.[0]; if (!file) return; e.target.value = '';
+    const key = `${slug}_${hIdx}_${imgIdx}`;
+    setHlUploading(u => ({ ...u, [key]: true }));
+    setHlMsg(m => ({ ...m, [`${slug}_${hIdx}`]: '⏳ Uploading…' }));
+    const fd = new FormData(); fd.append('file', file);
+    try {
+      const res = await fetch('/api/upload-image', { method: 'POST', body: fd });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.detail || 'Upload failed');
+      await fetch(`/api/admin/programs/${slug}/highlights/${hIdx}/${imgIdx}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
+        body: JSON.stringify({ image_url: result.url }),
+      });
+      setHlImages(prev => {
+        const updated = { ...prev };
+        if (!updated[slug]) updated[slug] = {};
+        if (!updated[slug][hIdx]) updated[slug][hIdx] = ['', '', ''];
+        const imgs = [...(updated[slug][hIdx] || ['', '', ''])];
+        imgs[imgIdx] = result.url;
+        updated[slug] = { ...updated[slug], [hIdx]: imgs };
+        return updated;
+      });
+      setHlMsg(m => ({ ...m, [`${slug}_${hIdx}`]: '✅ Saved' }));
+    } catch (err) {
+      setHlMsg(m => ({ ...m, [`${slug}_${hIdx}`]: `❌ ${err.message}` }));
+    } finally {
+      setHlUploading(u => ({ ...u, [key]: false }));
     }
   }
 
@@ -244,6 +375,35 @@ function Admin() {
       setTrusteeMsg(m => ({ ...m, [idx]: '✅ Saved' }));
     } catch (err) {
       setTrusteeMsg(m => ({ ...m, [idx]: `❌ ${err.message}` }));
+    }
+  }
+
+  async function handleAddTrustee() {
+    try {
+      const res = await fetch('/api/admin/trustees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
+        body: JSON.stringify({ name: 'New Trustee', role: 'Trustee' }),
+      });
+      if (!res.ok) { const b = await res.json(); throw new Error(b.detail || 'Failed'); }
+      const data = await res.json();
+      setTrustees(prev => [...prev, data]);
+    } catch (err) {
+      alert(`❌ ${err.message}`);
+    }
+  }
+
+  async function handleRemoveTrustee(idx) {
+    if (!window.confirm('Remove this trustee? This cannot be undone.')) return;
+    try {
+      const res = await fetch(`/api/admin/trustees/${idx}`, {
+        method: 'DELETE',
+        headers: { 'X-Admin-Token': token },
+      });
+      if (!res.ok) { const b = await res.json(); throw new Error(b.detail || 'Failed'); }
+      setTrustees(prev => prev.filter(t => t.idx !== idx));
+    } catch (err) {
+      alert(`❌ ${err.message}`);
     }
   }
 
@@ -454,31 +614,116 @@ function Admin() {
         {tab === 'programs' && (
           <div style={{ maxWidth: 720 }}>
             <p style={{ fontSize: '0.875rem', color: 'var(--ink-mid)', marginBottom: 24 }}>
-              Upload a photo for each program pillar. Images appear as card backgrounds on the website.
+              Upload a hero image for each program. It appears as the full-width background on the program detail page.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {programs.map(prog => (
-                <div key={prog.slug} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 18px', border: '1px solid var(--border)', borderRadius: 12, background: 'var(--white)' }}>
-                  <div style={{ width: 56, height: 56, borderRadius: 10, background: `${prog.color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', color: prog.color, flexShrink: 0 }}>
-                    <i className={prog.icon} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: 4 }}>{prog.title}</div>
+                <div key={prog.slug} style={{ border: '1px solid var(--border)', borderRadius: 12, background: 'var(--white)', overflow: 'hidden' }}>
+                  {/* header */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderBottom: prog.image_url ? '1px solid var(--border)' : 'none' }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 9, background: `${prog.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', color: prog.color, flexShrink: 0 }}>
+                      <i className={prog.icon} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{prog.title}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--ink-light)' }}>{prog.slug}</div>
+                    </div>
                     {prog.image_url
-                      ? <div style={{ fontSize: '0.75rem', color: 'var(--green)', wordBreak: 'break-all' }}>✅ {prog.image_url.split('/').pop()}</div>
-                      : <div style={{ fontSize: '0.75rem', color: 'var(--ink-light)' }}>No image yet</div>
+                      ? <span style={{ fontSize: '0.72rem', background: '#E8F5E9', color: '#2E7D32', borderRadius: 20, padding: '3px 10px', fontWeight: 500 }}>✅ Image set</span>
+                      : <span style={{ fontSize: '0.72rem', background: 'var(--surface)', color: 'var(--ink-light)', borderRadius: 20, padding: '3px 10px' }}>No image</span>
                     }
-                    {progMsg[prog.slug] && <div style={{ fontSize: '0.75rem', marginTop: 4 }}>{progMsg[prog.slug]}</div>}
                   </div>
+
+                  {/* image preview */}
                   {prog.image_url && (
-                    <img src={prog.image_url} alt="" style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />
+                    <div style={{ position: 'relative' }}>
+                      <img src={prog.image_url} alt={prog.title} style={{ width: '100%', height: 160, objectFit: 'cover', display: 'block' }} />
+                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 60%)', display: 'flex', alignItems: 'flex-end', padding: '12px 14px' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.85)' }}>This will appear as the program hero background</span>
+                      </div>
+                    </div>
                   )}
-                  <label style={{ flexShrink: 0 }}>
-                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleProgImageUpload(prog.slug, e)} disabled={progUploading[prog.slug]} />
-                    <span style={{ display: 'inline-block', padding: '7px 14px', background: 'var(--saffron)', color: '#fff', borderRadius: 20, fontSize: '0.8rem', fontWeight: 500, cursor: progUploading[prog.slug] ? 'wait' : 'pointer' }}>
-                      {progUploading[prog.slug] ? 'Uploading…' : prog.image_url ? 'Change' : 'Upload'}
-                    </span>
-                  </label>
+
+                  {/* actions */}
+                  <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <label>
+                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleProgImageUpload(prog.slug, e)} disabled={progUploading[prog.slug]} />
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', background: progUploading[prog.slug] ? 'var(--border)' : 'var(--saffron)', color: progUploading[prog.slug] ? 'var(--ink-light)' : '#fff', borderRadius: 20, fontSize: '0.8rem', fontWeight: 500, cursor: progUploading[prog.slug] ? 'wait' : 'pointer' }}>
+                        <i className="ti ti-photo-up" />
+                        {progUploading[prog.slug] ? 'Uploading…' : prog.image_url ? 'Change hero image' : 'Upload hero image'}
+                      </span>
+                    </label>
+                    {prog.image_url && (
+                      <button onClick={() => handleProgImageRemove(prog.slug)} style={{ padding: '7px 14px', borderRadius: 20, border: '1px solid #e57373', background: 'transparent', color: '#c62828', fontSize: '0.78rem', fontWeight: 500, cursor: 'pointer' }}>
+                        Remove
+                      </button>
+                    )}
+                    {progMsg[prog.slug] && (
+                      <span style={{ fontSize: '0.75rem', color: progMsg[prog.slug].startsWith('❌') ? '#c00' : 'var(--ink-mid)' }}>{progMsg[prog.slug]}</span>
+                    )}
+                  </div>
+
+                  {/* highlight collage images */}
+                  <div style={{ borderTop: '1px solid var(--border)' }}>
+                    <button
+                      onClick={() => setExpandedProg(expandedProg === prog.slug ? null : prog.slug)}
+                      style={{ width: '100%', padding: '11px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.83rem', fontWeight: 600, color: 'var(--ink-mid)' }}
+                    >
+                      <span><i className="ti ti-layout-grid" style={{ marginRight: 6 }} />Highlight collage images</span>
+                      <i className={`ti ti-chevron-${expandedProg === prog.slug ? 'up' : 'down'}`} />
+                    </button>
+
+                    {expandedProg === prog.slug && (
+                      <div style={{ padding: '0 18px 18px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--ink-light)', margin: 0 }}>
+                          Each card shows a 3-image collage. Upload all 3 to replace the placeholder images.
+                        </p>
+                        {(PROGRAM_HIGHLIGHTS[prog.slug] || []).map((h, hIdx) => {
+                          const uploaded = hlImages[prog.slug]?.[hIdx] || [];
+                          const allDone = uploaded.filter(Boolean).length === 3;
+                          return (
+                            <div key={hIdx} style={{ background: 'var(--surface)', borderRadius: 10, padding: '12px 14px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                                <i className={h.icon} style={{ color: prog.color }} />
+                                <span style={{ fontSize: '0.83rem', fontWeight: 600 }}>{h.title}</span>
+                                {allDone && <span style={{ fontSize: '0.7rem', background: '#E8F5E9', color: '#2E7D32', borderRadius: 20, padding: '2px 8px', marginLeft: 'auto' }}>✅ All uploaded</span>}
+                                {hlMsg[`${prog.slug}_${hIdx}`] && (
+                                  <span style={{ fontSize: '0.7rem', color: hlMsg[`${prog.slug}_${hIdx}`].startsWith('❌') ? '#c00' : 'var(--green)', marginLeft: allDone ? 0 : 'auto' }}>
+                                    {hlMsg[`${prog.slug}_${hIdx}`]}
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
+                                {[0, 1, 2].map(imgIdx => {
+                                  const url = uploaded[imgIdx] || '';
+                                  const uKey = `${prog.slug}_${hIdx}_${imgIdx}`;
+                                  const labels = ['Left (tall)', 'Right top', 'Right bottom'];
+                                  return (
+                                    <div key={imgIdx} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                      <div style={{ height: 80, borderRadius: 8, overflow: 'hidden', background: url ? 'transparent' : `${prog.color}12`, border: `1px dashed ${url ? 'transparent' : prog.color + '40'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        {url
+                                          ? <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                          : <i className="ti ti-photo" style={{ fontSize: '1.4rem', color: prog.color, opacity: 0.4 }} />
+                                        }
+                                      </div>
+                                      <div style={{ fontSize: '0.68rem', color: 'var(--ink-light)', textAlign: 'center' }}>{labels[imgIdx]}</div>
+                                      <label style={{ textAlign: 'center' }}>
+                                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleHlUpload(prog.slug, hIdx, imgIdx, e)} disabled={hlUploading[uKey]} />
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', background: hlUploading[uKey] ? 'var(--border)' : prog.color, color: '#fff', borderRadius: 20, fontSize: '0.72rem', fontWeight: 500, cursor: hlUploading[uKey] ? 'wait' : 'pointer', opacity: hlUploading[uKey] ? 0.7 : 1 }}>
+                                          <i className="ti ti-upload" style={{ fontSize: '0.75rem' }} />
+                                          {hlUploading[uKey] ? '…' : url ? 'Change' : 'Upload'}
+                                        </span>
+                                      </label>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -493,11 +738,11 @@ function Admin() {
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {trustees.map(t => (
-                <div key={t.idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '16px 18px', border: '1px solid var(--border)', borderRadius: 12, background: 'var(--white)' }}>
+                <div key={t.idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '16px 18px', border: '1px solid var(--border)', borderRadius: 12, background: 'var(--white)', position: 'relative' }}>
                   {t.photo_url
                     ? <img src={t.photo_url} alt={t.name} style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                     : <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'var(--saffron-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', color: 'var(--saffron)', fontWeight: 700, flexShrink: 0 }}>
-                        {t.name.charAt(0)}
+                        {(t.name || '?').charAt(0)}
                       </div>
                   }
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -517,16 +762,30 @@ function Admin() {
                       />
                     </div>
                     {trusteeMsg[t.idx] && <div style={{ fontSize: '0.75rem', marginBottom: 6 }}>{trusteeMsg[t.idx]}</div>}
-                    <label>
-                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleTrusteePhotoUpload(t.idx, e)} disabled={trusteeUploading[t.idx]} />
-                      <span style={{ display: 'inline-block', padding: '5px 12px', background: 'var(--saffron)', color: '#fff', borderRadius: 20, fontSize: '0.78rem', fontWeight: 500, cursor: trusteeUploading[t.idx] ? 'wait' : 'pointer' }}>
-                        {trusteeUploading[t.idx] ? 'Uploading…' : t.photo_url ? 'Change photo' : 'Upload photo'}
-                      </span>
-                    </label>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <label>
+                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleTrusteePhotoUpload(t.idx, e)} disabled={trusteeUploading[t.idx]} />
+                        <span style={{ display: 'inline-block', padding: '5px 12px', background: 'var(--saffron)', color: '#fff', borderRadius: 20, fontSize: '0.78rem', fontWeight: 500, cursor: trusteeUploading[t.idx] ? 'wait' : 'pointer' }}>
+                          {trusteeUploading[t.idx] ? 'Uploading…' : t.photo_url ? 'Change photo' : 'Upload photo'}
+                        </span>
+                      </label>
+                      <button
+                        onClick={() => handleRemoveTrustee(t.idx)}
+                        style={{ padding: '5px 12px', borderRadius: 20, border: '1px solid #e57373', background: 'transparent', color: '#c62828', fontSize: '0.78rem', fontWeight: 500, cursor: 'pointer' }}
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
+            <button
+              onClick={handleAddTrustee}
+              style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 22px', borderRadius: 40, border: '1.5px dashed var(--saffron)', background: 'var(--saffron-light)', color: 'var(--saffron-dark)', fontWeight: 600, fontSize: '0.88rem', cursor: 'pointer', width: '100%', justifyContent: 'center' }}
+            >
+              + Add trustee
+            </button>
           </div>
         )}
 
