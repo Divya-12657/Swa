@@ -241,7 +241,7 @@ const defaultPrograms = [
     details: [
       'Every day, Swabhimaan reaches families who struggle to put food on the table. Through monthly grocery distribution, community kitchens, nutrition drives, and emergency relief, we ensure that vulnerable households receive not just meals, but the assurance that someone cares.',
       'The concept of freebies is not encouraged in the current setup, but Swabhimaan\'s point of view is different. Freebies are not offered assuming that people are weak, incapable, or unable to fight their battles. They are offered to strengthen them enough to fight that battle.',
-      'And when we say strength, we mean real, physical/mental strength — the strength to wake up the next day, the zeal to keep fighting, to continue to fight, and to earn their next meal. It is about giving them the support/hope they need to reach that point.',
+      'And when we say strength, we mean real physical/mental strength — the strength to wake up the next day, the zeal to keep fighting, to continue to fight, and to earn their next meal. It is about giving them the support/hope they need to reach that point.',
       'Because sometimes, a person does not need someone to fight their battle for them. They just need enough support to get back on their feet and find the strength to fight it themselves. That is what Swabhimaan is trying to provide — not a way out of the struggle, but a little strength to face it, survive it, and eventually overcome it on their own.',
     ],
   },
@@ -590,57 +590,11 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
 
   const [donorName, setDonorName] = useState('');
   const [donorPhone, setDonorPhone] = useState('');
-  const [paying, setPaying] = useState(false);
-  const [payStatus, setPayStatus] = useState(null);
 
-  async function handleDonate() {
-    setPaying(true);
-    setPayStatus(null);
-    try {
-      const res = await fetch('/api/payments/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: donationAmount,
-          donor_name: donorName || null,
-          donor_phone: donorPhone || null,
-        }),
-      });
-      if (!res.ok) throw new Error('Could not create order');
-      const order = await res.json();
-
-      const options = {
-        key: order.key_id,
-        amount: order.amount * 100,
-        currency: 'INR',
-        name: 'Swabhimaan NGO',
-        description: 'Donation',
-        order_id: order.razorpay_order_id,
-        handler: async function (response) {
-          const verify = await fetch('/api/payments/verify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-            }),
-          });
-          setPayStatus(verify.ok ? 'success' : 'failed');
-          setPaying(false);
-        },
-        prefill: { name: donorName, contact: donorPhone },
-        theme: { color: '#D4650B' },
-        modal: { ondismiss: () => setPaying(false) },
-      };
-      const rzp = new window.Razorpay(options);
-      rzp.on('payment.failed', () => { setPayStatus('failed'); setPaying(false); });
-      rzp.open();
-    } catch (err) {
-      console.error(err);
-      setPayStatus('failed');
-      setPaying(false);
-    }
+  function handleDonate() {
+    const amountPaise = (donationAmount || 100) * 100;
+    const url = `https://rzp.io/l/TP4lsYMy?amount=${amountPaise}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
 
   return (
@@ -1402,20 +1356,9 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
           />
         </div>
         <div className="donate-cta">
-          <button className="btn-white" type="button" onClick={handleDonate} disabled={paying}>
-            {paying ? 'Processing…' : `Donate ₹${donationAmount} now`}
-            {!paying && <i className="ti ti-arrow-right" />}
+          <button className="btn-white" type="button" onClick={handleDonate}>
+            Donate ₹{donationAmount} now <i className="ti ti-arrow-right" />
           </button>
-          {payStatus === 'success' && (
-            <div style={{ color: '#0F6E56', fontWeight: 600, marginTop: 8 }}>
-              Thank you! Your donation was successful.
-            </div>
-          )}
-          {payStatus === 'failed' && (
-            <div style={{ color: '#c00', marginTop: 8 }}>
-              Payment failed. Please try again.
-            </div>
-          )}
           <div className="donate-note">Your payment will support food, education, and healthcare for families in need.</div>
         </div>
       </section>
@@ -1509,7 +1452,9 @@ function App() {
         if (programsData) setPrograms(programsData.map(p => {
           const def = defaultPrograms.find(d => d.slug === p.slug);
           return def ? {
-            ...def, ...p,
+            ...def,
+            image_url: p.image_url || def.image_url,
+            highlight_images: p.highlight_images,
             highlights: def.highlights.map((h, i) => ({
               ...h,
               images: (p.highlight_images?.[String(i)]?.filter(Boolean).length === 3
