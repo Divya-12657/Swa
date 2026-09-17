@@ -123,7 +123,7 @@ PROGRAMS = [
         "color": "#2E7D32",
         "image_url": "",
         "title": "Community awareness & environment",
-        "description": "Awareness drives on hygiene, sanitation, civic rights, and environmental sustainability to build healthier, cleaner neighborhoods.",
+        "description": "The environment cannot be an afterthought. In a world where the planet fights to survive each day, sustainability isn't a choice — it's the only way forward.",
         "stat": "12+ awareness drives yearly",
         "details": [
             "We run regular campaigns on hygiene and sanitation, helping households adopt practices like handwashing, safe drinking water storage, and proper waste disposal.",

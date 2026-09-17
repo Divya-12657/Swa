@@ -70,7 +70,6 @@ function Gallery({ activity, onClose }) {
 function ProgramDetail({ programs }) {
   const { slug } = useParams();
   const program = programs.find((p) => p.slug === slug);
-  const [activeIdx, setActiveIdx] = useState(0);
 
   if (!program) {
     return (
@@ -81,8 +80,7 @@ function ProgramDetail({ programs }) {
     );
   }
 
-  const activeH = program.highlights?.[activeIdx];
-  const collageImgs = activeH?.images || [];
+  const allImages = (program.highlights || []).flatMap(h => h.images || []).filter(Boolean);
 
   return (
     <div className="pdp-wrap">
@@ -103,81 +101,73 @@ function ProgramDetail({ programs }) {
         </div>
       </div>
 
-      {/* ── BODY: write-up + cards LEFT | collage RIGHT ── */}
-      <div className="pdp-body">
-        {/* LEFT */}
-        <div className="pdp-writeup">
-          <div className="pdp-about-label">
-            <span className="pdp-dot" style={{ background: program.color }} />
-            About this programme
+      {/* ── WRITE-UP ── */}
+      <div className="pdp-content">
+        <div className="pdp-about-label">
+          <span className="pdp-dot" style={{ background: program.color }} />
+          {program.aboutLabel || 'About this programme'}
+        </div>
+        <p className="pdp-about-lead">{typeof program.details?.[0] === 'string' ? program.details[0] : program.details?.[0]?.paras?.[0]}</p>
+        {program.details?.slice(1).map((item, i) =>
+          typeof item === 'string'
+            ? <p key={i} className="pdp-about-body">{item}</p>
+            : item.sectionTitle
+            ? <div key={i} className="pdp-section-title">{item.sectionTitle}</div>
+            : item.bullets
+            ? (
+              <ul key={i} className="pdp-bullet-list">
+                {item.bullets.map((b, j) => (
+                  <li key={j} className="pdp-bullet-item">
+                    <span className="pdp-bullet-title">{b.title}</span> — {b.desc}
+                  </li>
+                ))}
+              </ul>
+            )
+            : (
+              <div key={i} className="pdp-section-block">
+                <h3 className="pdp-section-heading">{item.heading}</h3>
+                {item.paras.map((para, j) => <p key={j} className="pdp-about-body">{para}</p>)}
+              </div>
+            )
+        )}
+
+        {program.ps && (
+          <div className="pdp-ps">
+            <span className="pdp-ps-label">P.S.</span>
+            {program.ps}
           </div>
-          <p className="pdp-about-lead">{program.details?.[0]}</p>
-          {program.details?.slice(1).map((para, i) => (
-            <p key={i} className="pdp-about-body">{para}</p>
-          ))}
+        )}
 
-          {program.ps && (
-            <div className="pdp-ps">
-              <span className="pdp-ps-label">P.S.</span>
-              {program.ps}
+        {/* ── POINTER CARDS ── */}
+        {program.highlights?.length > 0 && (
+          <div className="pdp-pointers">
+            <div className="pdp-highlights-label">What we do</div>
+            <div className="pdp-pointer-grid">
+              {program.highlights.map((h, i) => (
+                <div key={i} className="pdp-pointer-card" style={{ borderLeftColor: program.color }}>
+                  <div className="pdp-pointer-icon" style={{ background: `${program.color}18`, color: program.color }}>
+                    <i className={h.icon} />
+                  </div>
+                  <div className="pdp-pointer-title">{h.title}</div>
+                </div>
+              ))}
             </div>
-          )}
+          </div>
+        )}
 
-          {program.highlights?.length > 0 && (
-            <div className="pdp-left-highlights">
-              <div className="pdp-highlights-label">What we do</div>
-              <div className="pdp-highlights-grid">
-                {program.highlights.map((h, i) => {
-                  const isActive = i === activeIdx;
-                  return (
-                    <div
-                      key={i}
-                      className={`pdp-hcard${isActive ? ' pdp-hcard-active' : ''}`}
-                      style={isActive
-                        ? { background: program.color, border: 'none' }
-                        : { background: `${program.color}10`, border: `1.5px solid ${program.color}30` }
-                      }
-                      onClick={() => setActiveIdx(i)}
-                    >
-                      <i className="ti ti-arrow-up-right pdp-hcard-arrow" style={{ color: isActive ? 'rgba(255,255,255,0.6)' : program.color }} />
-                      <div className="pdp-hcard-icon" style={isActive
-                        ? { background: 'rgba(255,255,255,0.2)', color: '#fff' }
-                        : { background: `${program.color}20`, color: program.color }}>
-                        <i className={h.icon} />
-                      </div>
-                      <div className="pdp-hcard-title" style={{ color: isActive ? '#fff' : 'var(--ink)' }}>{h.title}</div>
-                    </div>
-                  );
-                })}
-              </div>
+        {/* ── MEDIA GALLERY ── */}
+        {allImages.length > 0 && (
+          <div className="pdp-gallery">
+            <div className="pdp-highlights-label">Gallery</div>
+            <div className="pdp-gallery-grid">
+              {allImages.map((src, i) => (
+                <div key={i} className="pdp-gallery-item">
+                  <img src={src} alt={`${program.title} ${i + 1}`} />
+                </div>
+              ))}
             </div>
-          )}
-        </div>
-
-        {/* RIGHT: collage changes per active card */}
-        <div className="pdp-right-col">
-          {collageImgs.length >= 3 ? (
-            <div className="pdp-collage" key={activeIdx}>
-              <img src={collageImgs[0]} alt="" className="pdp-collage-tall" />
-              <div className="pdp-collage-stack">
-                <img src={collageImgs[1]} alt="" className="pdp-collage-sm" />
-                <img src={collageImgs[2]} alt="" className="pdp-collage-sm" />
-              </div>
-            </div>
-          ) : (
-            <div className="pdp-img-frame" style={{ background: `${program.color}18` }}>
-              {program.image_url
-                ? <img src={program.image_url} alt={program.title} className="pdp-img" />
-                : <i className={program.icon} style={{ fontSize: '5rem', color: program.color, opacity: 0.5 }} />
-              }
-            </div>
-          )}
-          {activeH && (
-            <div className="pdp-collage-label" style={{ borderColor: `${program.color}40`, color: program.color }}>
-              <i className={activeH.icon} /> {activeH.title}
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* ── BOTTOM: All Programs link ── */}
@@ -239,10 +229,19 @@ const defaultPrograms = [
       { title: 'Nutrition awareness', icon: 'ti ti-bulb', images: ['https://picsum.photos/seed/nawr1/600/700','https://picsum.photos/seed/nawr2/600/380','https://picsum.photos/seed/nawr3/600/380'] },
     ],
     details: [
-      'Every day, Swabhimaan reaches families who struggle to put food on the table. Through monthly grocery distribution, community kitchens, nutrition drives, and emergency relief, we ensure that vulnerable households receive not just meals, but the assurance that someone cares.',
-      'The concept of freebies is not encouraged in the current setup, but Swabhimaan\'s point of view is different. Freebies are not offered assuming that people are weak, incapable, or unable to fight their battles. They are offered to strengthen them enough to fight that battle.',
-      'And when we say strength, we mean real physical/mental strength — the strength to wake up the next day, the zeal to keep fighting, to continue to fight, and to earn their next meal. It is about giving them the support/hope they need to reach that point.',
-      'Because sometimes, a person does not need someone to fight their battle for them. They just need enough support to get back on their feet and find the strength to fight it themselves. That is what Swabhimaan is trying to provide — not a way out of the struggle, but a little strength to face it, survive it, and eventually overcome it on their own.',
+      'Every day, Swabhimaan stands beside families who struggle to put food on the table. Through monthly grocery support, community kitchens, nutrition drives, and emergency relief, we make sure vulnerable households receive more than just a meal — they receive the reassurance that someone is looking out for them.',
+      { heading: 'Our Philosophy', paras: [
+        "Swabhimaan's approach is rooted in dignity, not dependency. We don't offer support because we believe people are weak, incapable, or unable to fight their own battles. We offer it because we believe everyone deserves the strength to fight that battle themselves.",
+        "By strength, we mean something real — the physical and mental resilience to wake up the next day, the will to keep going, and the ability to earn tomorrow's meal. Our role is to provide the support and hope needed to get there.",
+        "Because sometimes, a person doesn't need someone to fight their battle for them. They simply need enough support to get back on their feet and find their own strength to carry on. That's what Swabhimaan offers — not a way around the struggle, but the strength to face it, survive it, and ultimately overcome it on their own terms.",
+      ]},
+      { sectionTitle: "Swabhimaan's Key Initiatives" },
+      { heading: 'Nutrition Drives', paras: [
+        "Swabhimaan runs a dedicated community outreach program to identify newborns and pregnant women across the areas we serve. Our team assesses the nutritional needs of both mother and child, ensuring they receive the care that matters most during these formative years — because we believe the health of India's youngest generation shapes the country's future. This outreach is conducted periodically, paired with awareness sessions that equip mothers with the knowledge to fight malnutrition head-on.",
+      ]},
+      { heading: 'Monthly Grocery Distribution', paras: [
+        "Swabhimaan also ensures that families who cannot afford quality ration have consistent access to it. Today, this support reaches over 200 families every month.",
+      ]},
     ],
   },
   {
@@ -260,13 +259,29 @@ const defaultPrograms = [
       { title: 'Digital literacy', icon: 'ti ti-device-laptop', images: ['https://picsum.photos/seed/dig1/600/700','https://picsum.photos/seed/dig2/600/380','https://picsum.photos/seed/dig3/600/380'] },
       { title: 'Leadership & life skills', icon: 'ti ti-star', images: ['https://picsum.photos/seed/ldr1/600/700','https://picsum.photos/seed/ldr2/600/380','https://picsum.photos/seed/ldr3/600/380'] },
     ],
+    aboutLabel: 'Education as Empowerment',
     details: [
-    'Swabhimaan treats education as a weapon — a powerful tool to eradicate this so-called helplessness. For over two decades, it has been working in the field of education with the belief that education can transform the current state of an individual as well as their entire family.',
-    'With this belief at its core, Swabhimaan has taken up multiple programmes to address the different barriers that keep children and young people from moving forward. It runs NIOS programmes for school dropouts, giving them an opportunity to return to education and build a better future. Its after-school learning centres help strengthen their understanding and bridge the gaps in learning, especially for children who come from schools where quality education is often not provided in its truest form.',
-    'Swabhimaan also provides scholarships to ease the financial burden on parents and ensure that children can continue their education without having to give it up because of circumstances. Alongside this, its youth empowerment programmes focus on preparing young people not just academically, but as confident, capable and responsible citizens of this country.',
-    'For Swabhimaan, education is not merely about getting a certificate or completing school. It is about giving an individual the knowledge, confidence and ability to change the circumstances they were born into — and, in the process, change the future of their entire family.',
+      'Swabhimaan treats education as a weapon — a powerful force to break the cycle of so-called helplessness. For over two decades, we have worked in this field with one core belief - education has the power to transform not just an individual, but their entire family.',
+      'Guided by this belief, Swabhimaan runs multiple programmes designed to address the different barriers that hold children and young people back.',
+      { sectionTitle: "Swabhimaan's Key Initiatives" },
+      { heading: 'NIOS Programme', paras: [
+        'Our NIOS programmes give school dropouts a second chance at education and a path toward a better future.',
+      ]},
+      { heading: 'After-School Learning Centres', paras: [
+        'Our after-school learning centres help strengthen foundational understanding and bridge learning gaps — especially for children coming from schools where quality education often falls short.',
+      ]},
+      { heading: 'Scholarships', paras: [
+        'We provide scholarships to ease the financial burden on families, ensuring that no child has to give up their education because of circumstances beyond their control.',
+      ]},
+      { heading: 'Youth Empowerment', paras: [
+        'Our youth empowerment programmes prepare young people not just academically, but as confident, capable, and responsible citizens.',
+      ]},
+      'For Swabhimaan, education is never just about a certificate or completing school. It is about equipping individuals with the knowledge, confidence, and ability to change the circumstances they were born into — and, in doing so, change the future of their entire family.',
+      { heading: 'The Team Behind It', paras: [
+        'Behind all of this is a dedicated core team of teachers who keep bringing these children back to the classroom, again and again, without ever losing hope in them. Alongside them are individuals from different walks of life who step in to share their knowledge, experiences, and perspectives — helping these children discover what they are truly capable of becoming.',
+      ]},
     ],
-    ps: 'Behind all of this is a core team of teachers who keep bringing these children back to the classroom, time and again, without giving up on them or losing hope. There are also people from different walks of life and fields who come in to share their knowledge, experiences and perspectives, helping these children discover what they are capable of and what they can become.',
+    ps: null,
   },
   {
     slug: 'healthcare-access',
@@ -283,12 +298,31 @@ const defaultPrograms = [
       { title: 'Hygiene & sanitation', icon: 'ti ti-droplet', images: ['https://picsum.photos/seed/hyg1/600/700','https://picsum.photos/seed/hyg2/600/380','https://picsum.photos/seed/hyg3/600/380'] },
       { title: 'Health education', icon: 'ti ti-book-health', images: ['https://picsum.photos/seed/hed1/600/700','https://picsum.photos/seed/hed2/600/380','https://picsum.photos/seed/hed3/600/380'] },
     ],
+    aboutLabel: 'Healthcare for All',
     details: [
-      'Swabhimaan brings quality healthcare closer to communities through medical camps, preventive screenings, awareness programmes, and health consultations. We believe prevention is just as important as treatment.',
-      'From children\'s health to women\'s wellness and senior citizen care, our initiatives empower individuals with knowledge, early intervention, and access to essential healthcare services.',
-      'Our initiatives: Community medical camps · Preventive health screenings · Women\'s health programmes · Hygiene and sanitation awareness · Affordable healthcare support · Health education workshops.'],
-       ps : 'One might ask, what can we call affordable healthcare in today’s world, when even a basic consultation can cost ₹500 or more? But this is where Swabhimaan is different. It is true — Swabhimaan provides healthcare at an affordable cost, sometimes for just a few tens of rupees. The aim is simple: healthcare should not become a burden that people have to choose between and their next meal.'
-  
+      'Swabhimaan brings quality healthcare closer to communities through medical camps, preventive screenings, awareness programmes, and health consultations. We believe prevention is just as important as treatment — because early intervention today means fewer crises tomorrow.',
+      'From children\'s health to women\'s wellness and senior citizen care, our initiatives empower individuals with knowledge, timely intervention, and access to essential healthcare services.',
+      { sectionTitle: "Swabhimaan's Key Initiatives" },
+      { heading: 'Community Medical Camps', paras: [
+        'We organise regular medical camps that bring doctors and healthcare services directly into underserved communities, removing the barriers of distance and cost.',
+      ]},
+      { heading: 'Preventive Health Screenings', paras: [
+        'Through routine screenings, we help identify health issues early — before they become larger, harder-to-treat conditions.',
+      ]},
+      { heading: "Women's Health Programmes", paras: [
+        "Dedicated initiatives focus on women's wellness, addressing health needs that are often overlooked or deprioritised.",
+      ]},
+      { heading: 'Hygiene & Sanitation Awareness', paras: [
+        'We run awareness drives to promote hygiene and sanitation practices that prevent illness before it starts.',
+      ]},
+      { heading: 'Health Education Workshops', paras: [
+        'These workshops equip individuals and families with the knowledge to make informed decisions about their own health and wellbeing.',
+      ]},
+      { heading: 'Affordable Healthcare Support', paras: [
+        'One might ask — what does "affordable healthcare" even mean today, when a basic consultation can cost ₹500 or more? This is where Swabhimaan is different. We provide healthcare at a genuinely accessible cost, sometimes for just a few tens of rupees. Our aim is simple: healthcare should never become a burden that forces someone to choose between treatment and their next meal.',
+      ]},
+    ],
+    ps: null,
   },
   {
     slug: 'livelihood-skills',
@@ -321,19 +355,35 @@ const defaultPrograms = [
     description: 'When a woman rises, an entire family rises with her. We support women in building independence and leading change.',
     stat: '30+ self-help groups active',
     highlights: [
-      { title: 'Self-help groups', icon: 'ti ti-users-group', images: ['https://picsum.photos/seed/shg1/600/700','https://picsum.photos/seed/shg2/600/380','https://picsum.photos/seed/shg3/600/380'] },
-      { title: 'Entrepreneurship support', icon: 'ti ti-rocket', images: ['https://picsum.photos/seed/wep1/600/700','https://picsum.photos/seed/wep2/600/380','https://picsum.photos/seed/wep3/600/380'] },
-      { title: 'Skill development', icon: 'ti ti-needle-thread', images: ['https://picsum.photos/seed/skd1/600/700','https://picsum.photos/seed/skd2/600/380','https://picsum.photos/seed/skd3/600/380'] },
-      { title: 'Financial literacy', icon: 'ti ti-coins', images: ['https://picsum.photos/seed/wfl1/600/700','https://picsum.photos/seed/wfl2/600/380','https://picsum.photos/seed/wfl3/600/380'] },
-      { title: 'Leadership programmes', icon: 'ti ti-crown', images: ['https://picsum.photos/seed/wld1/600/700','https://picsum.photos/seed/wld2/600/380','https://picsum.photos/seed/wld3/600/380'] },
+      { title: 'Skill Development', icon: 'ti ti-users-group', images: ['https://picsum.photos/seed/shg1/600/700','https://picsum.photos/seed/shg2/600/380','https://picsum.photos/seed/shg3/600/380'] },
+      { title: 'Microfinancing and Entrepreneurship', icon: 'ti ti-rocket', images: ['https://picsum.photos/seed/wep1/600/700','https://picsum.photos/seed/wep2/600/380','https://picsum.photos/seed/wep3/600/380'] },
+      { title: 'Community Employment', icon: 'ti ti-needle-thread', images: ['https://picsum.photos/seed/skd1/600/700','https://picsum.photos/seed/skd2/600/380','https://picsum.photos/seed/skd3/600/380'] },
+      { title: 'Creche', icon: 'ti ti-coins', images: ['https://picsum.photos/seed/wfl1/600/700','https://picsum.photos/seed/wfl2/600/380','https://picsum.photos/seed/wfl3/600/380'] },
     ],
+    aboutLabel: 'Women Empowerment',
     details: [
-      'Swabhimaan supports women in discovering their strengths, building financial independence, and becoming leaders within their communities. Through self-help groups, skill development, entrepreneurship, and financial literacy, we help women create lasting change for themselves and future generations.',
-      'Swabhimaan’s main and foremost goal has always been to empower women and create opportunities for them to thrive with dignity and confidence. It has created various programmes that help women build a livelihood of their own — from providing tailoring machines so they can earn through their skills, to beautician classes that enable them to pursue employment opportunities.',
-      'Swabhimaan also creates women entrepreneurs by supporting them through microfinancing and providing the initial financial support they need to start something of their own.',
-      'Most of the in house programmes like the nutrition drives, food distribution are supported by women of the same community, this way it creates jobs and responsibility.',
-      ],
-      ps :'And Swabhimaan wants to say this out loud and clear: women have shown an extraordinary sense of responsibility and loyalty towards this support. In fact, 98% of the women supported through these initiatives have returned the principal amount.That 98% is more than just a number. It reflects their commitment, their responsibility and their determination to build something for themselves and their families. Women are the true pillars of their homes, and when they are given an opportunity, they prove that trust can be repaid with responsibility. If 98% of women have demonstrated that commitment, can there be a stronger testament to the fact that investing in a woman is an investment in an entire family.'
+      'Swabhimaan supports women in discovering their strengths, building financial independence, and becoming leaders within their communities. Through self-help groups, skill development, entrepreneurship, and financial literacy, we help women create lasting change — for themselves and for the generations that follow.',
+      "Empowering women has always been Swabhimaan's foremost goal, creating opportunities for them to thrive with dignity and confidence.",
+      { sectionTitle: "Swabhimaan's Key Initiatives" },
+      { heading: 'Skill Development', paras: [
+        'We help women build a livelihood of their own — from providing tailoring machines so they can earn through their craft, to beautician training that opens doors to employment.',
+      ]},
+      { heading: 'Microfinancing & Entrepreneurship', paras: [
+        'Swabhimaan supports women in becoming entrepreneurs by offering microfinancing and the initial financial push they need to start something of their own.',
+      ]},
+      { heading: 'Community Employment', paras: [
+        'Many of our in-house initiatives — including nutrition drives and food distribution — are run by women from the same community. This creates not just jobs, but a sense of ownership and responsibility within the community itself.',
+      ]},
+      { heading: 'Creche', paras: [
+        'An initiative that gives mothers the freedom to focus on their own growth or take up employment, knowing their child is in a safe space. At the creche, children are nurtured and encouraged to build early learning skills, giving mothers the confidence to step forward without compromising their child\'s care.',
+      ]},
+      { heading: 'A Testament to Trust', paras: [
+        "Women  supported by Swabhimaan have shown an extraordinary sense of responsibility and loyalty. In fact, 98% of the women supported through these initiatives have returned their principal amount in full.",
+        "That 98% is more than a statistic — it reflects commitment, accountability, and a determination to build something for themselves and their families. Women are the true pillars of their homes, and when given the opportunity, they prove that trust, when placed in them, is always repaid with responsibility.",
+        'If 98% of women have demonstrated that level of commitment, is there a stronger testament to one simple truth: investing in a woman is investing in an entire family.',
+      ]},
+    ],
+    ps: null,
   },
   {
     slug: 'community-environment',
@@ -341,17 +391,21 @@ const defaultPrograms = [
     color: '#2E7D32',
     image_url: '',
     title: 'Community awareness & environment',
-    description: 'Awareness drives on hygiene, sanitation, civic rights, and environmental sustainability to build healthier, cleaner neighborhoods.',
+    description: 'The environment cannot be an afterthought. In a world where the planet fights to survive each day, sustainability isn\'t a choice — it\'s the only way forward.',
     stat: '12+ awareness drives yearly',
-    highlights: [
-      { title: 'Plogging', icon: 'ti ti-users-group', images: ['https://picsum.photos/seed/shg1/600/700','https://picsum.photos/seed/shg2/600/380','https://picsum.photos/seed/shg3/600/380'] },
-      { title: 'Waste management', icon: 'ti ti-rocket', images: ['https://picsum.photos/seed/wep1/600/700','https://picsum.photos/seed/wep2/600/380','https://picsum.photos/seed/wep3/600/380'] },
-    ],
+    highlights: [],
+    aboutLabel: 'Environmental Responsibility',
     details: [
-      'We run regular campaigns on hygiene and sanitation, helping households adopt practices like handwashing, safe drinking water storage, and proper waste disposal.',
-      'Our civic rights workshops help residents access entitlements like ration cards, Aadhaar-linked benefits, voter registration, and grievance redressal processes.',
-      'On the environmental side, we organize tree plantation drives, waste segregation campaigns, and disaster-preparedness sessions ahead of monsoon season.',
+      'Swabhimaan runs multiple environmental campaigns aimed at keeping communities clean, hygienic, and sustainable.',
+      { sectionTitle: "Swabhimaan's Key Initiatives" },
+      { heading: 'Plastic-Free Practices', paras: ['We actively discourage the use of plastic and promote cloth bags as a sustainable alternative.'] },
+      { heading: 'Plogging Drives', paras: ['We encourage plogging (picking up litter while walking/jogging) to build a stronger sense of environmental responsibility within the community.'] },
+      { heading: 'Plastic-Free Centre', paras: ['The Swabhimaan centre itself operates as a plastic-free space, reflecting our commitment in practice, not just in words.'] },
+      { heading: 'Early Habit-Building', paras: ['We believe the best environmental habits are the ones instilled early, so we work closely with children to build these values right from the start.'] },
+      { heading: 'Waste Segregation', paras: ['We place strong emphasis on waste segregation, working hand-in-hand with local municipal bodies (Pourakarmikas) to ensure these efforts create real, lasting impact.'] },
+      { heading: 'Community Hygiene', paras: ['Ongoing awareness efforts help keep community spaces clean and hygienic for everyone.'] },
     ],
+    ps: null,
   },
 ];
 
@@ -449,9 +503,28 @@ function getYoutubeEmbed(url) {
 
 function Home({ activities, programs, stories, faqs, trust, trustees, donors, videos, settings = {}, fdOpen, setFdOpen, volOpen, setVolOpen }) {
   const [galleryActivity, setGalleryActivity] = useState(null);
+  const [aboutExpanded, setAboutExpanded] = useState(false);
   const [videoMuted, setVideoMuted] = useState(true);
   const videoRef = useRef(null);
+  const actRibbonRef = useRef(null);
   useEffect(() => { if (videoRef.current) videoRef.current.muted = videoMuted; }, [videoMuted]);
+
+  useEffect(() => {
+    const el = actRibbonRef.current;
+    if (!el) return;
+    let frame;
+    const tick = () => {
+      el.scrollLeft += 0.7;
+      if (el.scrollLeft >= el.scrollWidth / 2) el.scrollLeft = 0;
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  const scrollActRibbon = (dir) => {
+    actRibbonRef.current?.scrollBy({ left: dir * 300, behavior: 'smooth' });
+  };
   const [showCalendar, setShowCalendar] = useState(false);
   const [calMonth, setCalMonth] = useState(() => { const d = new Date(); d.setDate(1); return d; });
   const [selectedCalDate, setSelectedCalDate] = useState(null);
@@ -616,12 +689,23 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
             <br />
             -F. Scott Fitzgerald,
           </h1>
-          <div className="hero-about-text">
-            <p>Swabhimaan is not just an organization; it is a place where every individual is nurtured, supported, and cared for, irrespective of their circumstances or background. It stands firmly on the belief that every person on this planet deserves to be treated with dignity and respect.</p>
-            <p>It is a place that empowers people and helps them realize their potential. With a strong focus on women and children—the very foundation and building blocks of society—Swabhimaan works tirelessly to create opportunities that lead to lasting change.</p>
-            <p>Over the years, its work has expanded across multiple domains, and its journey of impact continues to grow. What began with a vision for education gradually expanded to include food support, ration distribution, micro-lending, healthcare initiatives, and even a full-fledged school-like setup.</p>
-            <p>Swabhimaan has also created employment opportunities through initiatives such as paper making and has established a crèche that enables women to upskill themselves while ensuring their children are cared for in a safe environment. Its mission continues to evolve, touching lives and building stronger communities every day.</p>
+          <div className={`hero-about-text${aboutExpanded ? ' hero-about-expanded' : ''}`}>
+            <p>Swabhimaan is more than an organization—it is a space where every individual is nurtured, supported, and cared for, regardless of their circumstances or background. At its heart is a simple yet powerful belief: every person deserves to live with dignity, respect, and opportunity.</p>
+            <p>Swabhimaan is built on the belief of "by the community, for the community." Its work grows from an understanding of the needs, aspirations, and challenges of the people it serves. By working alongside communities rather than simply working for them, Swabhimaan strives to create solutions that are meaningful, sustainable, and rooted in real lives.</p>
+            {aboutExpanded && <>
+              <p>Swabhimaan works to empower individuals by helping them discover their potential, build confidence, and create pathways toward a better future. With a special focus on women and children—the foundation of strong families and communities—Swabhimaan creates opportunities that can lead to lasting and positive change.</p>
+              <p>What began with a vision centered on education has grown into a broader mission addressing multiple aspects of community well-being. Over the years, Swabhimaan has expanded its initiatives to include food and ration support, nutrition programs, micro-lending, healthcare, education, and a school-like learning environment designed to help children grow, learn, and thrive.</p>
+              <p className="hero-about-subhead">Investing in the Young of Tomorrow</p>
+              <p>Swabhimaan recognizes that a stronger future begins with healthy, well-nourished, and educated children. Through its nutrition programs, the organization works to ensure that children receive the nourishment they need during their formative years. The aim goes beyond addressing immediate hunger—it is about laying the foundation for the young people who will shape tomorrow's communities.</p>
+              <p>By investing in children's nutrition, education, health, and overall development today, Swabhimaan strives to build a stronger, healthier, and more capable generation for the future.</p>
+              <p>Swabhimaan also believes that empowerment goes hand in hand with economic independence. Through initiatives such as paper-making and other livelihood opportunities, it has created avenues for employment, skill development, and self-reliance. Its crèche provides a safe and caring environment for children while enabling women to pursue learning, develop new skills, and work toward greater independence.</p>
+              <p>Every initiative at Swabhimaan is rooted in the same purpose—to create opportunities, restore dignity, strengthen communities, and help individuals build better lives for themselves and their families.</p>
+              <p>At Swabhimaan, we believe that meaningful change is not created by one person or one initiative. It is built together, by the community and for the community. By nurturing people, empowering families, investing in children, and creating opportunities for growth, Swabhimaan continues to touch lives and build a stronger, more dignified, and more inclusive future—one person, one family, and one community at a time.</p>
+            </>}
           </div>
+          <button className="hero-about-toggle" onClick={() => setAboutExpanded(e => !e)}>
+            {aboutExpanded ? <><i className="ti ti-chevron-up" /> Read less</> : <><i className="ti ti-chevron-down" /> Read more</>}
+          </button>
           <div className="hero-btns">
             <a href="#donate" className="btn btn-primary">
               <i className="ti ti-heart" /> Donate now
@@ -698,7 +782,10 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
           <Link to="/calendar" className="see-all"><i className="ti ti-calendar" /> Calendar</Link>
         </div>
 
-        <div className="ribbon-wrapper">
+        <div className="ribbon-wrapper act-ribbon-wrapper" ref={actRibbonRef}>
+          <button className="ribbon-arrow ribbon-arrow-left" onClick={() => scrollActRibbon(-1)} title="Scroll left">
+            <i className="ti ti-chevron-left" />
+          </button>
           <div className="ribbon-track act-ribbon-track">
             {[...activities, ...activities].map((activity, i) => {
               const imgs = activity.images?.length
@@ -1111,7 +1198,7 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
         <div className="stories-grid">
           {stories.map((story) => (
             <div key={story.name} className="story-card">
-              <div className="story-quote">“{story.quote}”</div>
+              <div className="story-quote">"{story.quote}"</div>
               <div className="story-person">
                 <div className="story-avatar">{story.name.charAt(0)}</div>
                 <div>
@@ -1457,8 +1544,8 @@ function App() {
             highlight_images: p.highlight_images,
             highlights: def.highlights.map((h, i) => ({
               ...h,
-              images: (p.highlight_images?.[String(i)]?.filter(Boolean).length === 3
-                ? p.highlight_images[String(i)]
+              images: (p.highlight_images?.[String(i)]?.filter(Boolean).length > 0
+                ? p.highlight_images[String(i)].filter(Boolean)
                 : h.images),
             })),
           } : p;
