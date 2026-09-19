@@ -1573,15 +1573,19 @@ function App() {
   return (
     <div className="app">
       {notifText && !notifDismissed && (
-        <div className="notif-bar">
-          <i className="ti ti-bell-ringing" />
-          {notifLink
-            ? <a href={notifLink} target="_blank" rel="noopener noreferrer">{notifText}</a>
-            : <span>{notifText}</span>
-          }
-          <button className="notif-bar-dismiss" onClick={() => { setNotifDismissed(true); try { sessionStorage.setItem('notif_dismissed', '1'); } catch {} }} title="Dismiss">
+        <div className="notif-float">
+          <button className="notif-float-dismiss" onClick={() => { setNotifDismissed(true); try { sessionStorage.setItem('notif_dismissed', '1'); } catch {} }} title="Dismiss">
             <i className="ti ti-x" />
           </button>
+          <div className="notif-float-header">
+            <i className="ti ti-bell-ringing" /> Upcoming
+          </div>
+          <div className="notif-float-body">
+            {notifLink
+              ? <a href={notifLink} target="_blank" rel="noopener noreferrer">{notifText}</a>
+              : notifText
+            }
+          </div>
         </div>
       )}
       <nav>
