@@ -69,7 +69,7 @@ nav {
 
 .hero {
   min-height: 92vh;
-  padding: 80px 5% 60px;
+  padding: 40px 5% 60px;
   display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: start;
   background: var(--surface);
   position: relative; overflow: hidden;
