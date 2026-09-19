@@ -317,8 +317,8 @@ function Admin() {
       setHlImages(prev => {
         const updated = { ...prev };
         if (!updated[slug]) updated[slug] = {};
-        if (!updated[slug][hIdx]) updated[slug][hIdx] = ['', '', ''];
-        const imgs = [...(updated[slug][hIdx] || ['', '', ''])];
+        const imgs = [...(updated[slug][hIdx] || [])];
+        while (imgs.length <= imgIdx) imgs.push('');
         imgs[imgIdx] = result.url;
         updated[slug] = { ...updated[slug], [hIdx]: imgs };
         return updated;
@@ -328,6 +328,26 @@ function Admin() {
       setHlMsg(m => ({ ...m, [`${slug}_${hIdx}`]: `❌ ${err.message}` }));
     } finally {
       setHlUploading(u => ({ ...u, [key]: false }));
+    }
+  }
+
+  async function handleHlRemove(slug, hIdx, imgIdx) {
+    try {
+      await fetch(`/api/admin/programs/${slug}/highlights/${hIdx}/${imgIdx}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
+        body: JSON.stringify({ image_url: '' }),
+      });
+      setHlImages(prev => {
+        const updated = { ...prev };
+        const imgs = [...(updated[slug]?.[hIdx] || [])];
+        imgs[imgIdx] = '';
+        updated[slug] = { ...updated[slug], [hIdx]: imgs };
+        return updated;
+      });
+      setHlMsg(m => ({ ...m, [`${slug}_${hIdx}`]: '✅ Removed' }));
+    } catch (err) {
+      setHlMsg(m => ({ ...m, [`${slug}_${hIdx}`]: `❌ ${err.message}` }));
     }
   }
 
@@ -674,49 +694,50 @@ function Admin() {
                     </button>
 
                     {expandedProg === prog.slug && (
-                      <div style={{ padding: '0 18px 18px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                      <div style={{ padding: '0 18px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
                         <p style={{ fontSize: '0.75rem', color: 'var(--ink-light)', margin: 0 }}>
-                          Each card shows a 3-image collage. Upload all 3 to replace the placeholder images.
+                          Upload images for each section — they appear in the gallery on the program page.
                         </p>
                         {(PROGRAM_HIGHLIGHTS[prog.slug] || []).map((h, hIdx) => {
                           const uploaded = hlImages[prog.slug]?.[hIdx] || [];
-                          const allDone = uploaded.filter(Boolean).length === 3;
+                          const filledCount = uploaded.filter(Boolean).length;
+                          const nextIdx = uploaded.findIndex(u => !u);
+                          const addIdx = nextIdx !== -1 ? nextIdx : uploaded.length;
+                          const canAdd = filledCount < 6;
+                          const addKey = `${prog.slug}_${hIdx}_${addIdx}`;
                           return (
                             <div key={hIdx} style={{ background: 'var(--surface)', borderRadius: 10, padding: '12px 14px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                                 <i className={h.icon} style={{ color: prog.color }} />
                                 <span style={{ fontSize: '0.83rem', fontWeight: 600 }}>{h.title}</span>
-                                {allDone && <span style={{ fontSize: '0.7rem', background: '#E8F5E9', color: '#2E7D32', borderRadius: 20, padding: '2px 8px', marginLeft: 'auto' }}>✅ All uploaded</span>}
+                                {filledCount > 0 && <span style={{ fontSize: '0.7rem', background: `${prog.color}15`, color: prog.color, borderRadius: 20, padding: '2px 8px', marginLeft: 4 }}>{filledCount} photo{filledCount > 1 ? 's' : ''}</span>}
                                 {hlMsg[`${prog.slug}_${hIdx}`] && (
-                                  <span style={{ fontSize: '0.7rem', color: hlMsg[`${prog.slug}_${hIdx}`].startsWith('❌') ? '#c00' : 'var(--green)', marginLeft: allDone ? 0 : 'auto' }}>
+                                  <span style={{ fontSize: '0.7rem', color: hlMsg[`${prog.slug}_${hIdx}`].startsWith('❌') ? '#c00' : '#2E7D32', marginLeft: 'auto' }}>
                                     {hlMsg[`${prog.slug}_${hIdx}`]}
                                   </span>
                                 )}
                               </div>
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
-                                {[0, 1, 2].map(imgIdx => {
-                                  const url = uploaded[imgIdx] || '';
-                                  const uKey = `${prog.slug}_${hIdx}_${imgIdx}`;
-                                  const labels = ['Left (tall)', 'Right top', 'Right bottom'];
-                                  return (
-                                    <div key={imgIdx} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                      <div style={{ height: 80, borderRadius: 8, overflow: 'hidden', background: url ? 'transparent' : `${prog.color}12`, border: `1px dashed ${url ? 'transparent' : prog.color + '40'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        {url
-                                          ? <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                                          : <i className="ti ti-photo" style={{ fontSize: '1.4rem', color: prog.color, opacity: 0.4 }} />
-                                        }
-                                      </div>
-                                      <div style={{ fontSize: '0.68rem', color: 'var(--ink-light)', textAlign: 'center' }}>{labels[imgIdx]}</div>
-                                      <label style={{ textAlign: 'center' }}>
-                                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleHlUpload(prog.slug, hIdx, imgIdx, e)} disabled={hlUploading[uKey]} />
-                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', background: hlUploading[uKey] ? 'var(--border)' : prog.color, color: '#fff', borderRadius: 20, fontSize: '0.72rem', fontWeight: 500, cursor: hlUploading[uKey] ? 'wait' : 'pointer', opacity: hlUploading[uKey] ? 0.7 : 1 }}>
-                                          <i className="ti ti-upload" style={{ fontSize: '0.75rem' }} />
-                                          {hlUploading[uKey] ? '…' : url ? 'Change' : 'Upload'}
-                                        </span>
-                                      </label>
-                                    </div>
-                                  );
-                                })}
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                                {uploaded.map((url, imgIdx) => url ? (
+                                  <div key={imgIdx} style={{ position: 'relative', width: 72, height: 72, flexShrink: 0 }}>
+                                    <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8, display: 'block' }} />
+                                    <button
+                                      onClick={() => handleHlRemove(prog.slug, hIdx, imgIdx)}
+                                      style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', background: '#fff', border: '1.5px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '0.65rem', color: '#c00', boxShadow: '0 1px 4px rgba(0,0,0,0.15)', padding: 0 }}
+                                    >
+                                      <i className="ti ti-x" />
+                                    </button>
+                                  </div>
+                                ) : null)}
+                                {canAdd && (
+                                  <label style={{ width: 72, height: 72, borderRadius: 8, border: `2px dashed ${prog.color}60`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: hlUploading[addKey] ? 'wait' : 'pointer', background: `${prog.color}08`, flexShrink: 0 }}>
+                                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleHlUpload(prog.slug, hIdx, addIdx, e)} disabled={hlUploading[addKey]} />
+                                    {hlUploading[addKey]
+                                      ? <i className="ti ti-loader-2" style={{ fontSize: '1.3rem', color: prog.color, opacity: 0.6 }} />
+                                      : <i className="ti ti-plus" style={{ fontSize: '1.5rem', color: prog.color, opacity: 0.7 }} />
+                                    }
+                                  </label>
+                                )}
                               </div>
                             </div>
                           );
