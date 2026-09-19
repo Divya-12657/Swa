@@ -433,7 +433,8 @@ def list_programs(session: SQLSession = Depends(get_session)):
         slug_hi = hi_map.get(slug, {})
         highlight_images = {}
         for h_idx, imgs in slug_hi.items():
-            urls = [imgs.get(0, ""), imgs.get(1, ""), imgs.get(2, "")]
+            max_idx = max(imgs.keys()) if imgs else -1
+            urls = [imgs.get(i, "") for i in range(max_idx + 1)]
             if any(urls):
                 highlight_images[str(h_idx)] = urls
         result.append({**p, "image_url": images.get(slug, p.get("image_url", "")), "highlight_images": highlight_images})
