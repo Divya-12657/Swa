@@ -1494,7 +1494,6 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
           <div>© 2026 Swabhimaan NGO · Built for users</div>
           <div className="cert-badges">
             <span className="cert-badge">80G</span>
-            <span className="cert-badge">FCRA</span>
             <span className="cert-badge">12A</span>
           </div>
         </div>
