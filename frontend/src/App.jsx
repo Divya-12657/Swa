@@ -1482,7 +1482,7 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
           <div>
             <div className="footer-col-title">Contact</div>
             <div className="footer-links">
-              <a href="mailto:info@swabhimaan.org">info@swabhimaan.org</a>
+              <a href="mailto:swabhimaan2000@gmail.com">swabhimaan2000@gmail.com</a>
               <a href="tel:+919945436757">+91 99454 36757</a>
               <a href={OFFICE_MAP_URL} target="_blank" rel="noopener noreferrer">
                 <i className="ti ti-map-pin" /> Find us on map
