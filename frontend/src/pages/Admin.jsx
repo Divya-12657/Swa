@@ -18,6 +18,23 @@ function SettingsTab({ token }) {
   const [vals, setVals] = useState({});
   const [uploading, setUploading] = useState({});
   const [msgs, setMsgs] = useState({});
+  const [notifSaving, setNotifSaving] = useState(false);
+  const [notifMsg, setNotifMsg] = useState('');
+
+  async function handleSaveText(key, value) {
+    setNotifSaving(true); setNotifMsg('');
+    try {
+      const res = await fetch(`/api/admin/settings/${key}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
+        body: JSON.stringify({ value }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setVals(v => ({ ...v, [key]: value }));
+      setNotifMsg('✅ Saved');
+    } catch (err) { setNotifMsg(`❌ ${err.message}`); }
+    finally { setNotifSaving(false); }
+  }
 
   useEffect(() => {
     fetch('/api/settings').then(r => r.json()).then(setVals).catch(() => {});
@@ -60,6 +77,61 @@ function SettingsTab({ token }) {
   return (
     <div style={{ maxWidth: 640 }}>
       <p style={{ fontSize: '0.875rem', color: 'var(--ink-mid)', marginBottom: 24 }}>Site-wide settings. Changes take effect after page refresh.</p>
+      {/* Notification bar */}
+      <div style={{ padding: '18px 20px', border: '1px solid var(--border)', borderRadius: 12, background: 'var(--white)', marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+          <i className="ti ti-bell-ringing" style={{ color: 'var(--saffron)', fontSize: '1.1rem' }} />
+          <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Notification banner</span>
+          {vals.notification_text && <span style={{ fontSize: '0.7rem', background: '#E8F5E9', color: '#2E7D32', borderRadius: 20, padding: '2px 8px', marginLeft: 4 }}>Active</span>}
+        </div>
+        <div style={{ fontSize: '0.78rem', color: 'var(--ink-light)', marginBottom: 14 }}>
+          Shows an orange banner at the top of every page. Leave blank to hide it.
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div>
+            <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--ink-mid)', display: 'block', marginBottom: 4 }}>Message</label>
+            <input
+              defaultValue={vals.notification_text || ''}
+              placeholder="e.g. Upcoming: Annual Health Camp — Oct 15, 2026"
+              style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.85rem', boxSizing: 'border-box' }}
+              id="notif-text-input"
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--ink-mid)', display: 'block', marginBottom: 4 }}>Link (optional)</label>
+            <input
+              defaultValue={vals.notification_link || ''}
+              placeholder="https://... (leave blank for no link)"
+              style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: '0.85rem', boxSizing: 'border-box' }}
+              id="notif-link-input"
+            />
+          </div>
+          {notifMsg && <div style={{ fontSize: '0.75rem', color: notifMsg.startsWith('❌') ? '#c00' : '#2E7D32' }}>{notifMsg}</div>}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={async () => {
+                const text = document.getElementById('notif-text-input').value.trim();
+                const link = document.getElementById('notif-link-input').value.trim();
+                await handleSaveText('notification_text', text);
+                await handleSaveText('notification_link', link);
+              }}
+              disabled={notifSaving}
+              style={{ padding: '7px 18px', background: notifSaving ? 'var(--border)' : 'var(--saffron)', color: '#fff', border: 'none', borderRadius: 20, fontSize: '0.8rem', fontWeight: 500, cursor: notifSaving ? 'wait' : 'pointer' }}
+            >
+              {notifSaving ? 'Saving…' : 'Save banner'}
+            </button>
+            {vals.notification_text && (
+              <button
+                onClick={async () => { await handleSaveText('notification_text', ''); await handleSaveText('notification_link', ''); }}
+                style={{ padding: '7px 14px', background: 'none', border: '1px solid #c00', color: '#c00', borderRadius: 20, fontSize: '0.78rem', cursor: 'pointer' }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
       {SITE_SETTINGS.map(({ key, type, label, hint }) => (
         <div key={key} style={{ padding: '18px 20px', border: '1px solid var(--border)', borderRadius: 12, background: 'var(--white)', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>

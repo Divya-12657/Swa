@@ -685,9 +685,9 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
             <br />
             <em>Many times what people need is not brilliant mind that speaks,</em>
             <br />
-            But a speacial heart that listens.
+            But a special heart that listens.
             <br />
-            -F. Scott Fitzgerald,
+            -F. Scott Fitzgerald
           </h1>
           <div className={`hero-about-text${aboutExpanded ? ' hero-about-expanded' : ''}`}>
             <p>Swabhimaan is more than an organization—it is a space where every individual is nurtured, supported, and cared for, regardless of their circumstances or background. At its heart is a simple yet powerful belief: every person deserves to live with dignity, respect, and opportunity.</p>
@@ -1564,8 +1564,26 @@ function App() {
     loadContent();
   }, []);
 
+  const [notifDismissed, setNotifDismissed] = useState(() => {
+    try { return sessionStorage.getItem('notif_dismissed') === '1'; } catch { return false; }
+  });
+  const notifText = settings.notification_text || '';
+  const notifLink = settings.notification_link || '';
+
   return (
     <div className="app">
+      {notifText && !notifDismissed && (
+        <div className="notif-bar">
+          <i className="ti ti-bell-ringing" />
+          {notifLink
+            ? <a href={notifLink} target="_blank" rel="noopener noreferrer">{notifText}</a>
+            : <span>{notifText}</span>
+          }
+          <button className="notif-bar-dismiss" onClick={() => { setNotifDismissed(true); try { sessionStorage.setItem('notif_dismissed', '1'); } catch {} }} title="Dismiss">
+            <i className="ti ti-x" />
+          </button>
+        </div>
+      )}
       <nav>
         <Link to="/" className="nav-logo">
           Swabhi<span>maan</span>
