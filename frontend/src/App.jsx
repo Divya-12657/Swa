@@ -80,7 +80,7 @@ function ProgramDetail({ programs }) {
     );
   }
 
-  const allImages = (program.highlights || []).flatMap(h => h.images || []).filter(Boolean);
+  const allImages = (program.highlight_images?.['0'] || []).filter(Boolean);
 
   return (
     <div className="pdp-wrap">
