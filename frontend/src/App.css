@@ -27,9 +27,9 @@ button { cursor: pointer; }
   right: 24px;
   z-index: 200;
   background: var(--white);
-  border: 1.5px solid var(--saffron);
+  border: 1.5px solid #A82020;
   border-radius: 14px;
-  box-shadow: 0 6px 28px rgba(235,107,52,0.18), 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 6px 28px rgba(168,32,32,0.18), 0 2px 8px rgba(0,0,0,0.08);
   max-width: 260px;
   min-width: 200px;
   padding: 14px 16px 14px 14px;
@@ -50,7 +50,7 @@ button { cursor: pointer; }
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: var(--saffron);
+  color: #A82020;
 }
 .notif-float-body {
   font-size: 0.84rem;
@@ -58,7 +58,7 @@ button { cursor: pointer; }
   color: var(--ink);
   line-height: 1.45;
 }
-.notif-float-body a { color: var(--saffron); text-decoration: none; font-weight: 600; }
+.notif-float-body a { color: #A82020; text-decoration: none; font-weight: 600; }
 .notif-float-body a:hover { text-decoration: underline; }
 .notif-float-dismiss {
   position: absolute;
