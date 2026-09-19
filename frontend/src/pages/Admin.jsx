@@ -387,15 +387,21 @@ function Admin() {
 
   async function handleTrusteeNameUpdate(idx, name, role) {
     try {
-      await fetch(`/api/admin/trustees/${idx}`, {
+      const res = await fetch(`/api/admin/trustees/${idx}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
         body: JSON.stringify({ name, role }),
       });
+      if (!res.ok) { const txt = await res.text(); let msg = txt; try { msg = JSON.parse(txt).detail || txt; } catch {} throw new Error(msg); }
       setTrusteeMsg(m => ({ ...m, [idx]: '✅ Saved' }));
     } catch (err) {
       setTrusteeMsg(m => ({ ...m, [idx]: `❌ ${err.message}` }));
     }
+  }
+
+  async function safeJson(res) {
+    const txt = await res.text();
+    try { return JSON.parse(txt); } catch { throw new Error(txt || `HTTP ${res.status}`); }
   }
 
   async function handleAddTrustee() {
@@ -405,8 +411,8 @@ function Admin() {
         headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token },
         body: JSON.stringify({ name: 'New Trustee', role: 'Trustee' }),
       });
-      if (!res.ok) { const b = await res.json(); throw new Error(b.detail || 'Failed'); }
-      const data = await res.json();
+      const data = await safeJson(res);
+      if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
       setTrustees(prev => [...prev, data]);
     } catch (err) {
       alert(`❌ ${err.message}`);
@@ -420,7 +426,7 @@ function Admin() {
         method: 'DELETE',
         headers: { 'X-Admin-Token': token },
       });
-      if (!res.ok) { const b = await res.json(); throw new Error(b.detail || 'Failed'); }
+      if (!res.ok) { const data = await safeJson(res); throw new Error(data.detail || `HTTP ${res.status}`); }
       setTrustees(prev => prev.filter(t => t.idx !== idx));
     } catch (err) {
       alert(`❌ ${err.message}`);
