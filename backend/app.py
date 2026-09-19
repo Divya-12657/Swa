@@ -669,10 +669,19 @@ def on_startup():
     SQLModel.metadata.create_all(engine)
     from sqlalchemy import text, inspect as sa_inspect
     with engine.connect() as conn:
-        cols = [c["name"] for c in sa_inspect(engine).get_columns("activity")]
-        if "images" not in cols:
+        insp = sa_inspect(engine)
+        # activity migrations
+        act_cols = [c["name"] for c in insp.get_columns("activity")]
+        if "images" not in act_cols:
             conn.execute(text("ALTER TABLE activity ADD COLUMN IF NOT EXISTS images TEXT"))
-            conn.commit()
+        # trusteeprofile migrations
+        if insp.has_table("trusteeprofile"):
+            tp_cols = [c["name"] for c in insp.get_columns("trusteeprofile")]
+            if "bio" not in tp_cols:
+                conn.execute(text("ALTER TABLE trusteeprofile ADD COLUMN IF NOT EXISTS bio TEXT"))
+            if "updated_at" not in tp_cols:
+                conn.execute(text("ALTER TABLE trusteeprofile ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT now()"))
+        conn.commit()
 
 
 @app.post("/api/food-requests", status_code=201)
