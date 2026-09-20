@@ -1476,7 +1476,6 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
             <div className="footer-links">
               <Link to="/#volunteer">Volunteer</Link>
               <Link to="/#faq">FAQ</Link>
-              <a href="/Admin">Admin</a>
             </div>
           </div>
           <div>
