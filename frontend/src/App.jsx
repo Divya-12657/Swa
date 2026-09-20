@@ -1614,9 +1614,9 @@ function App() {
           <Link to="/#volunteer" className="btn btn-ghost" onClick={() => setVolOpen(true)}>
             <i className="ti ti-users" /> Volunteer
           </Link>
-          <Link to="/#donate" className="btn btn-primary">
+          <a href="#donate" className="btn btn-primary" onClick={e => { e.preventDefault(); document.getElementById('donate')?.scrollIntoView({ behavior: 'smooth' }); }}>
             <i className="ti ti-heart" /> Donate
-          </Link>
+          </a>
         </div>
         <button className="nav-hamburger" onClick={() => setMenuOpen(v => !v)} aria-label="Menu">
           <i className={menuOpen ? 'ti ti-x' : 'ti ti-menu-2'} />
