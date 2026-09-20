@@ -1443,9 +1443,14 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
           />
         </div>
         <div className="donate-cta">
-          <button className="btn-white" type="button" onClick={handleDonate}>
-            Donate ₹{donationAmount} now <i className="ti ti-arrow-right" />
-          </button>
+          <a
+            className="btn-white"
+            href={`https://pages.razorpay.com/swabhimaan-donation${donationAmount ? `?amount=${donationAmount * 100}` : ''}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Donate {donationAmount ? `₹${donationAmount}` : ''} now <i className="ti ti-arrow-right" />
+          </a>
           <div className="donate-note">Your payment will support food, education, and healthcare for families in need.</div>
         </div>
       </section>
