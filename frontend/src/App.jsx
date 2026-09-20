@@ -550,7 +550,7 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
     return map;
   }, [activities]);
 
-  const [donationAmount, setDonationAmount] = useState(500);
+  const [donationAmount, setDonationAmount] = useState(0);
 
   const impact = useMemo(() => {
     const meals = Math.max(1, Math.round(donationAmount / 55));
