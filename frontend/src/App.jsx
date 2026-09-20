@@ -1460,7 +1460,7 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
             <div className="footer-social">
               <button className="social-btn"><i className="ti ti-brand-facebook" /></button>
               <a className="social-btn" href="https://www.instagram.com/swabhimaan.charitabletrust?igsh=ZWx5Zm84bjd4N3Ax" target="_blank" rel="noopener noreferrer"><i className="ti ti-brand-instagram" /></a>
-              <button className="social-btn"><i className="ti ti-brand-youtube" /></button>
+              <a className="social-btn" href="https://youtube.com/@swabhimaan808?si=J_vUdiUtsOzX8IxX" target="_blank" rel="noopener noreferrer"><i className="ti ti-brand-youtube" /></a>
             </div>
           </div>
           <div>
