@@ -1445,7 +1445,7 @@ function Home({ activities, programs, stories, faqs, trust, trustees, donors, vi
         <div className="donate-cta">
           <a
             className="btn-white"
-            href={`https://pages.razorpay.com/swabhimaan-donation${donationAmount ? `?amount=${donationAmount * 100}` : ''}`}
+            href={`https://pages.razorpay.com/swabhimaan-donation${donationAmount ? `?amount=${donationAmount}` : ''}`}
             target="_blank"
             rel="noopener noreferrer"
           >
